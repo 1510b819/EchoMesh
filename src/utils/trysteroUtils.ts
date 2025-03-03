@@ -8,5 +8,8 @@ export const createRoom = (roomId: string) => {
   return { sendMessage, getMessage };
 };
 
-// Generate a unique room ID if none exists
-export const generateRoomId = () => `room-${Math.random().toString(36).substring(2, 10)}`;
+export const generateRoomId = () => {
+    return crypto.getRandomValues(new Uint8Array(16))
+      .reduce((acc, byte) => acc + byte.toString(16).padStart(2, "0"), "");
+  };
+  
