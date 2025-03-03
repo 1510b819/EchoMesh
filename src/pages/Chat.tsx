@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { deriveKeyFromRoom, decryptMessage } from "../utils/cryptoUtils";
 import { createRoom, generateRoomId } from "../utils/trysteroUtils";
 import { handleJoinRoom } from "../utils/roomUtils";
@@ -6,7 +6,6 @@ import { handleSend } from "../utils/messageUtils";
 
 // Import the CSS file
 import './Chat.css';
-
 
 type Message = {
   text: string;
