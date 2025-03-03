@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { deriveKeyFromRoom, decryptMessage } from "../utils/cryptoUtils";
-import { createRoom, generateRoomId} from "../utils/trysteroUtils";
+import { createRoom, generateRoomId } from "../utils/trysteroUtils";
 import { handleJoinRoom } from "../utils/roomUtils";
 import { handleSend } from "../utils/messageUtils";
 
@@ -27,12 +27,12 @@ const Chat = () => {
   const [customRoom, setCustomRoom] = useState<string>("");
   const [encryptionKey, setEncryptionKey] = useState<CryptoKey | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const [lastMessageTime, setLastMessageTime] = useState(0);
   const messageCooldown = 1000; // 1-second cooldown
   const messageLifetime = 60 * 60 * 1000; // 1 hour
 
-  // Store room ID in local storage & derive encryption key
   useEffect(() => {
     sessionStorage.setItem("echomesh-room", roomId);
     deriveKeyFromRoom(roomId)
@@ -40,7 +40,6 @@ const Chat = () => {
       .catch((err) => console.error("Key derivation failed:", err));
   }, [roomId]);
 
-  // Message expiration logic
   useEffect(() => {
     const cleanupInterval = setInterval(() => {
       setMessages((prev) => prev.filter((msg) => Date.now() - msg.timestamp < messageLifetime));
@@ -49,7 +48,6 @@ const Chat = () => {
     return () => clearInterval(cleanupInterval);
   }, []);
 
-  // Create room and manage messages
   const { sendMessage, getMessage } = createRoom(roomId);
 
   useEffect(() => {
@@ -61,12 +59,15 @@ const Chat = () => {
     });
   }, [encryptionKey]);
 
-  // Auto-scroll to the latest message
   useEffect(() => {
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, 100);
   }, [messages]);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
   return (
     <div
@@ -87,12 +88,24 @@ const Chat = () => {
       {/* Header */}
       <div style={{ textAlign: "center", borderBottom: `1px solid ${nordTheme.border}`, paddingBottom: "5px" }}>
         <h3 style={{ margin: 0, color: nordTheme.accent }}>EchoMesh</h3>
-        <small style={{ color: nordTheme.sender }}>Room: {roomId}</small>
+        <small 
+  style={{ 
+    color: nordTheme.sender, 
+    cursor: "pointer" 
+  }}
+  onClick={() => {
+    navigator.clipboard.writeText(roomId);
+    alert("Room ID copied to clipboard!");
+  }}
+>
+  Room: {roomId}
+</small>
       </div>
 
       {/* Room Controls */}
       <div style={{ display: "flex", gap: "5px" }}>
         <input
+          ref={inputRef}
           type="text"
           value={customRoom}
           onChange={(e) => setCustomRoom(e.target.value)}
@@ -118,7 +131,7 @@ const Chat = () => {
           }}
           disabled={!customRoom.trim()}
         >
-          Join Room
+          Join
         </button>
         <button
           onClick={() => handleJoinRoom(generateRoomId(), setRoomId, setMessages, setCustomRoom)}
@@ -131,7 +144,7 @@ const Chat = () => {
             flex: 1,
           }}
         >
-          New Room
+          New
         </button>
       </div>
 
@@ -172,6 +185,7 @@ const Chat = () => {
       {/* Message Input */}
       <div style={{ display: "flex", gap: "5px" }}>
         <input
+          ref={inputRef}
           type="text"
           value={message}
           onChange={(e) => setMessage(e.target.value)}

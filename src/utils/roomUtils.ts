@@ -2,6 +2,7 @@ export const isValidRoomId = (roomId: string) => {
     return /^room-[a-z0-9]{12}$/.test(roomId); // Matches "room-xxxxxxxxxxxx" (12 lowercase alphanumeric chars)
   };
   
+  
   export const handleJoinRoom = (
     newRoomId: string,
     setRoomId: (id: string) => void,
@@ -19,5 +20,4 @@ export const isValidRoomId = (roomId: string) => {
     setMessages([]); // Clear messages when switching rooms
     setCustomRoom(""); // Clear input after joining
   };
-  
   

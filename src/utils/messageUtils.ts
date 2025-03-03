@@ -27,12 +27,19 @@ export const handleSend = async (
   if (!message.trim()) return;
 
   setLastMessageTime(now);
-
   if (message.startsWith("/")) {
-    handleCommand({ message, roomId, setRoomId: () => {}, setMessages, setMessage });
+    handleCommand({ 
+      message, 
+      roomId, 
+      setRoomId: () => {},  // ✅ Placeholder function (if needed)
+      setMessages, 
+      setMessage, 
+      setCustomRoom: () => {} // ✅ Added setCustomRoom to prevent errors
+    });
     setMessage("");
     return;
   }
+  
 
   if (!encryptionKey) {
     console.error("Encryption key not available");
