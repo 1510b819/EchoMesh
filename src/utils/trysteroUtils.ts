@@ -9,7 +9,14 @@ export const createRoom = (roomId: string) => {
 };
 
 export const generateRoomId = () => {
-    return crypto.getRandomValues(new Uint8Array(16))
-      .reduce((acc, byte) => acc + byte.toString(16).padStart(2, "0"), "");
+    const randomBytes = crypto.getRandomValues(new Uint8Array(6)); // 6 bytes = 12 base36 chars
+    const randomId = Array.from(randomBytes)
+      .map((byte) => byte.toString(36).padStart(2, "0")) // Base36 encoding
+      .join("")
+      .slice(0, 12); // Ensure exactly 12 chars
+  
+    return `room-${randomId}`;
   };
+  
+  
   

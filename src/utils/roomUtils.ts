@@ -1,10 +1,5 @@
-export const generateRoomId = () => {
-    return crypto.getRandomValues(new Uint8Array(16))
-      .reduce((acc, byte) => acc + byte.toString(16).padStart(2, "0"), "");
-  };
-  
-  export const isValidRoomId = (roomId: string) => {
-    return /^[0-9a-f]{32}$/.test(roomId); // Ensures 32-character lowercase hex string
+export const isValidRoomId = (roomId: string) => {
+    return /^room-[a-z0-9]{12}$/.test(roomId); // Matches "room-xxxxxxxxxxxx" (12 lowercase alphanumeric chars)
   };
   
   export const handleJoinRoom = (
@@ -24,4 +19,5 @@ export const generateRoomId = () => {
     setMessages([]); // Clear messages when switching rooms
     setCustomRoom(""); // Clear input after joining
   };
+  
   
