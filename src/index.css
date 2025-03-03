@@ -10,7 +10,6 @@
   color-scheme: dark;
   background-color: var(--nord-bg);
   color: var(--nord-fg);
-  margin: 0;
 }
 
 body {
@@ -19,6 +18,7 @@ body {
   align-items: center;
   height: 100vh;
   margin: 0;
+  padding: 0 15px; /* Adding padding to the body to prevent elements from sticking to the edges */
 }
 
 button {

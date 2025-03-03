@@ -4,15 +4,9 @@ import { createRoom, generateRoomId } from "../utils/trysteroUtils";
 import { handleJoinRoom } from "../utils/roomUtils";
 import { handleSend } from "../utils/messageUtils";
 
-const nordTheme = {
-  background: "#2E3440",
-  text: "#D8DEE9",
-  inputBg: "#3B4252",
-  border: "#4C566A",
-  sender: "#81A1C1",
-  receiver: "#88C0D0",
-  accent: "#5E81AC",
-};
+// Import the CSS file
+import './Chat.css';
+
 
 type Message = {
   text: string;
@@ -70,111 +64,47 @@ const Chat = () => {
   }, []);
 
   return (
-    <div
-      style={{
-        background: nordTheme.background,
-        color: nordTheme.text,
-        fontFamily: "monospace",
-        padding: "20px",
-        width: "450px",
-        borderRadius: "6px",
-        border: `1px solid ${nordTheme.border}`,
-        boxShadow: `0 0 8px rgba(0, 0, 0, 0.2)`,
-        display: "flex",
-        flexDirection: "column",
-        gap: "10px",
-      }}
-    >
+    <div className="chat-container">
       {/* Header */}
-      <div style={{ textAlign: "center", borderBottom: `1px solid ${nordTheme.border}`, paddingBottom: "5px" }}>
-        <h3 style={{ margin: 0, color: nordTheme.accent }}>EchoMesh</h3>
+      <div className="chat-header">
+        <h3>EchoMesh</h3>
         <small 
-  style={{ 
-    color: nordTheme.sender, 
-    cursor: "pointer" 
-  }}
-  onClick={() => {
-    navigator.clipboard.writeText(roomId);
-    alert("Room ID copied to clipboard!");
-  }}
->
-  Room: {roomId}
-</small>
+          onClick={() => {
+            navigator.clipboard.writeText(roomId);
+            alert("Room ID copied to clipboard!");
+          }}
+        >
+          Room: {roomId}
+        </small>
       </div>
 
       {/* Room Controls */}
-      <div style={{ display: "flex", gap: "5px" }}>
+      <div className="room-controls">
         <input
           ref={inputRef}
           type="text"
           value={customRoom}
           onChange={(e) => setCustomRoom(e.target.value)}
           placeholder="Enter Room ID..."
-          style={{
-            flex: 2,
-            background: nordTheme.inputBg,
-            color: nordTheme.text,
-            border: `1px solid ${nordTheme.border}`,
-            padding: "6px",
-            fontFamily: "monospace",
-          }}
         />
         <button
           onClick={() => handleJoinRoom(customRoom, setRoomId, setMessages, setCustomRoom)}
-          style={{
-            background: nordTheme.receiver,
-            color: "#2E3440",
-            padding: "6px",
-            border: "none",
-            cursor: "pointer",
-            flex: 1,
-          }}
           disabled={!customRoom.trim()}
         >
           Join
         </button>
         <button
           onClick={() => handleJoinRoom(generateRoomId(), setRoomId, setMessages, setCustomRoom)}
-          style={{
-            background: nordTheme.sender,
-            color: "#2E3440",
-            padding: "6px",
-            border: "none",
-            cursor: "pointer",
-            flex: 1,
-          }}
         >
           New
         </button>
       </div>
 
       {/* Message Display */}
-      <div
-        style={{
-          border: `1px solid ${nordTheme.border}`,
-          padding: "10px",
-          height: "250px",
-          overflowY: "auto",
-          background: nordTheme.inputBg,
-          borderRadius: "5px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "5px",
-        }}
-      >
+      <div className="message-display">
         {messages.map((msg, index) => (
-          <div key={index} style={{ display: "flex", justifyContent: msg.sender === "Me" ? "flex-end" : "flex-start" }}>
-            <p
-              style={{
-                background: msg.sender === "Me" ? nordTheme.sender : nordTheme.receiver,
-                color: nordTheme.background,
-                padding: "6px 10px",
-                borderRadius: "5px",
-                maxWidth: "75%",
-                fontSize: "14px",
-                margin: "2px 0",
-              }}
-            >
+          <div key={index} className={`message ${msg.sender === "Me" ? "me" : ""}`}>
+            <p>
               <strong>{msg.sender}:</strong> {msg.text}
             </p>
           </div>
@@ -183,9 +113,9 @@ const Chat = () => {
       </div>
 
       {/* Message Input */}
-      <div style={{ display: "flex", gap: "5px" }}>
+      <div className="message-input">
         <input
-          ref={inputRef}
+          ref={inputRef}  
           type="text"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
@@ -204,14 +134,6 @@ const Chat = () => {
               messageCooldown
             )
           }
-          style={{
-            flex: 1,
-            background: nordTheme.inputBg,
-            color: nordTheme.text,
-            border: `1px solid ${nordTheme.border}`,
-            padding: "6px",
-            fontFamily: "monospace",
-          }}
         />
         <button
           onClick={() =>
@@ -227,13 +149,6 @@ const Chat = () => {
               messageCooldown
             )
           }
-          style={{
-            background: nordTheme.sender,
-            color: "#2E3440",
-            padding: "6px",
-            border: "none",
-            cursor: "pointer",
-          }}
         >
           Send
         </button>

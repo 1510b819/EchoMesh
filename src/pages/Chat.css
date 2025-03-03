@@ -1,0 +1,183 @@
+/* General styles */
+.chat-container {
+    background: #2e3440;  /* Dark background to mimic terminal */
+    color: #d8dee9;  /* Light text color */
+    font-family: "Fira Code", monospace;  /* Monospace font for terminal-like feel */
+    padding: 20px;
+    width: 100%;
+    max-width: 450px;
+    border-radius: 8px;  /* Slightly more rounded corners */
+    border: 1px solid #4c566a;  /* Soft border to maintain a clean terminal look */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);  /* Slightly more prominent shadow */
+    display: flex;
+    flex-direction: column;
+    gap: 15px;  /* Increased gap between sections */
+    margin: 0 auto;
+    overflow-x: hidden;  /* Prevent horizontal overflow */
+}
+
+/* Chat header */
+.chat-header {
+    text-align: center;
+    border-bottom: 1px solid #4c566a;  /* Soft border for separation */
+    padding-bottom: 10px;  /* Increased padding for better spacing */
+}
+
+.chat-header h3 {
+    margin: 0;
+    color: #88c0d0;  /* Lighter blue color for header */
+    font-size: 1.6rem;  /* Larger font size for visibility */
+}
+
+.chat-header small {
+    color: #81a1c1;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: color 0.3s ease;  /* Smoother transition */
+}
+
+.chat-header small:hover {
+    color: #88c0d0;  /* Lighter blue color on hover for a modern feel */
+}
+
+/* Room controls */
+.room-controls {
+    display: flex;
+    gap: 15px;  /* Increased gap between controls */
+    flex-wrap: wrap;
+    max-width: 90%;
+    margin: 0 auto;
+}
+
+.room-controls input,
+.room-controls button {
+    padding: 10px 14px;  /* Increased padding for better clickability */
+    font-family: "Fira Code", monospace;
+    background: #3b4252;  /* Background color that matches terminal theme */
+    color: #d8dee9;  /* Light text */
+    border: 1px solid #4c566a;  /* Soft borders */
+    font-size: 1rem;
+    border-radius: 6px;
+    transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;  /* Smooth transition for hover effects */
+    width: 100%;  /* Ensure inputs and buttons span full width */
+}
+
+.room-controls input:focus,
+.room-controls button:hover {
+    background: #81a1c1;  /* Accent color on hover for input and button */
+    color: #2e3440;  /* Darker background for text on hover */
+    border-color: #88c0d0;  /* Lighter border on hover for better focus */
+}
+
+/* Message display area */
+.message-display {
+    border: 1px solid #4c566a;
+    padding: 15px;
+    height: 250px;
+    overflow-y: auto;
+    background: #3b4252;
+    border-radius: 6px;  /* Slightly more rounded corners */
+    display: flex;
+    flex-direction: column;
+    gap: 12px;  /* Increased gap between messages */
+    word-wrap: break-word;
+    word-break: break-word;
+    white-space: pre-wrap;
+    background-color: #2e3440;  /* Darker background for messages */
+}
+
+.message-display .message {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.message-display .message.me {
+    justify-content: flex-end;
+}
+
+/* Styling for the names (bookmark style) */
+.message-display .message .username {
+    background-color: #4c566a;  /* Subtle background for names */
+    color: #d8dee9;  /* Light text for visibility */
+    padding: 6px 10px;  /* Slightly larger padding for better aesthetics */
+    font-weight: bold;
+    border-radius: 8px;  /* More rounded corners for a bookmark-like feel */
+    font-size: 1.2rem;  /* Slightly larger font size */
+    display: inline-block;
+    margin-right: 12px;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);  /* Subtle shadow for prominence */
+}
+
+.message-display .message p {
+    background: #81a1c1;  /* Message bubble background */
+    color: #2e3440;  /* Dark text */
+    padding: 10px 14px;  /* Larger padding for a more spacious look */
+    border-radius: 8px;  /* Rounder message bubbles */
+    max-width: 75%;
+    font-size: 15px;  /* Slightly larger font size for readability */
+    margin: 4px 0;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* Message input area */
+.message-input {
+    display: flex;
+    gap: 15px;  /* Increased gap between input elements */
+    flex-wrap: wrap;
+    justify-content: space-between;
+}
+
+.message-input input,
+.message-input button {
+    min-width: 120px;
+    flex-grow: 1;
+    flex-basis: 45%;
+    background: #3b4252;  /* Consistent background for input and button */
+    border: 1px solid #4c566a;
+    color: #d8dee9;
+    border-radius: 8px;  /* More rounded corners */
+    font-size: 1.1rem;  /* Slightly larger font size */
+    padding: 10px 14px;
+    transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+.message-input input:focus,
+.message-input button:hover {
+    background: #81a1c1;  /* Accent color on hover */
+    color: #2e3440;  /* Darker background for text on hover */
+    border-color: #88c0d0;  /* Lighter border on hover for better focus */
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 600px) {
+    .chat-container {
+        padding: 10px;
+        width: 100%;
+        max-width: 100%;
+        margin-left: -10px;
+    }
+
+    .message-display {
+        height: 200px;
+    }
+
+    .message-display .message p {
+        font-size: 12px;
+    }
+
+    .room-controls input,
+    .room-controls button {
+        min-width: 90%;
+        flex: 1;
+        max-width: 100%;
+    }
+
+    .message-input input,
+    .message-input button {
+        min-width: 45%;
+    }
+}
