@@ -1,11 +1,11 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import P2PChat from "./pages/P2PChat";
+import Chat from "./pages/Chat";
 function App() {
   return (
     <Router>
       <div className="flex justify-center items-center h-screen">
         <Routes>
-          <Route path="/" element={<P2PChat />} />
+          <Route path="/" element={<Chat />} />
         </Routes>
       </div>
     </Router>
