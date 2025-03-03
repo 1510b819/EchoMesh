@@ -5,7 +5,7 @@ type SendMessageFunction = (msg: string) => void;
 type SetMessagesFunction = React.Dispatch<React.SetStateAction<{ text: string; sender: string; timestamp: number }[]>>;
 type SetMessageFunction = React.Dispatch<React.SetStateAction<string>>;
 type SetLastMessageTimeFunction = React.Dispatch<React.SetStateAction<number>>;
-
+//handle the send prompts
 export const handleSend = async (
   message: string,
   roomId: string,
