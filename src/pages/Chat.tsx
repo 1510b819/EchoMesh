@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { deriveKeyFromRoom, decryptMessage } from "../utils/cryptoUtils";
+import { deriveKeyFromPassword, decryptMessage } from "../utils/cryptoUtils";
 import { createRoom, generateRoomId } from "../utils/trysteroUtils";
 import { handleJoinRoom } from "../utils/roomUtils";
 import { handleSend } from "../utils/messageUtils";
@@ -46,10 +46,12 @@ const Chat = () => {
     sessionStorage.setItem("echomesh-room", roomData.id);
     sessionStorage.setItem("echomesh-room-password", roomData.password);
 
-    deriveKeyFromRoom(roomData.id)
+    // Derive the encryption key properly
+    deriveKeyFromPassword(roomData.password, roomData.id)
       .then(setEncryptionKey)
       .catch(console.error);
   }, [roomData]);
+
 
   useEffect(() => {
     const cleanupMessages = () => {
