@@ -6,33 +6,41 @@ export const arrayBufferToBase64 = (buffer: ArrayBuffer) =>
 export const base64ToArrayBuffer = (base64: string) =>
   Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
 
-// Derives an encryption key from a room name using PBKDF2
 export const deriveKeyFromPassword = async (password: string, roomID: string) => {
   const encoder = new TextEncoder();
-  const salt = encoder.encode(roomID); // Room ID as salt
+  const salt = encoder.encode(roomID); // Use room ID as salt
+  const info = encoder.encode("EchoMesh Encryption"); // Context-specific info
 
-  // Import the password as key material
+  // Import the password as raw key material
   const keyMaterial = await crypto.subtle.importKey(
-      "raw", encoder.encode(password),
-      { name: "PBKDF2" }, 
-      false, ["deriveKey"]
+    "raw",
+    encoder.encode(password),
+    { name: "HMAC", hash: "SHA-256" }, // Use HMAC for HKDF
+    false,
+    ["sign"]
   );
 
-  // Derive a strong encryption key
-  return crypto.subtle.deriveKey(
-      {
-          name: "PBKDF2",
-          salt,
-          iterations: 200000, // Adjust iterations for security
-          hash: "SHA-256"
-      },
-      keyMaterial,
-      { name: "AES-GCM", length: 256 },
-      false,
-      ["encrypt", "decrypt"]
+  // Derive a strong encryption key using HKDF
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt,
+      info,
+    },
+    keyMaterial,
+    256 // Output 256-bit key
+  );
+
+  // Import the derived key for AES-GCM encryption
+  return await crypto.subtle.importKey(
+    "raw",
+    derivedBits,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
   );
 };
-
 
 
 // Encrypts a message with AES-GCM
