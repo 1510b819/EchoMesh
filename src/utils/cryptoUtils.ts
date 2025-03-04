@@ -1,4 +1,4 @@
-import * as sodium from "libsodium-wrappers";  // ✅ Ensures all functions are available
+import sodium from "libsodium-wrappers";  // ✅ Correct import
 
 // ✅ Initialize Sodium Once
 const initSodium = async () => {
@@ -24,6 +24,9 @@ export const base64ToArrayBuffer = (base64: string): Uint8Array => {
 // 📌 Derive a Secure Encryption Key from Password & Room ID
 export const deriveKeyFromPassword = async (password: string, roomID: string): Promise<Uint8Array> => {
   await sodium.ready; // ✅ Ensure sodium is initialized before anything else
+  
+  console.log("🔹 Sodium functions available:", Object.keys(sodium)); // ✅ Debugging
+
   if (!sodium.crypto_pwhash) {
     throw new Error("crypto_pwhash function is unavailable. Check Libsodium import.");
   }
@@ -32,7 +35,7 @@ export const deriveKeyFromPassword = async (password: string, roomID: string): P
 
   const salt = sodium.crypto_generichash(16, sodium.from_string(roomID)); // 16-byte salt
 
-  return sodium.crypto_pwhash(
+  return await sodium.crypto_pwhash( // ✅ Use `await` for consistency
     32, // 32-byte key for XChaCha20-Poly1305
     sodium.from_string(password),
     salt,
