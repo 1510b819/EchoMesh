@@ -4,6 +4,7 @@ import { createRoom, generateRoomId } from "../utils/trysteroUtils";
 import { handleJoinRoom } from "../utils/roomUtils";
 import { handleSend } from "../utils/messageUtils";
 import DOMPurify from "dompurify";
+import sodium from "libsodium-wrappers";
 
 // Import the CSS file
 import "./Chat.css";
@@ -43,15 +44,24 @@ const Chat = () => {
   const { sendMessage, getMessage } = createRoom(roomData.id);
 
   useEffect(() => {
-    sessionStorage.setItem("echomesh-room", roomData.id);
-    sessionStorage.setItem("echomesh-room-password", roomData.password);
-
-    // 🔑 Update to derive a Uint8Array key instead of CryptoKey
-    deriveKeyFromPassword(roomData.password, roomData.id)
-      .then(setEncryptionKey)
-      .catch(console.error);
+    const deriveKey = async () => {
+      await sodium.ready; // ✅ Ensure sodium is fully loaded
+      try {
+        const key = await deriveKeyFromPassword(roomData.password, roomData.id);
+        setEncryptionKey(key);
+      } catch (error) {
+        console.error("Key derivation failed:", error);
+      }
+    };
+  
+    if (roomData.password) {
+      deriveKey();
+    } else {
+      console.warn("No password provided, encryption is disabled.");
+    }
   }, [roomData]);
-
+  
+  
   useEffect(() => {
     const cleanupMessages = () => {
       setMessages((prev) =>

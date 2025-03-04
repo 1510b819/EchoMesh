@@ -24,18 +24,20 @@ export const base64ToArrayBuffer = (base64: string): Uint8Array => {
 
 // Derive a Secure Encryption Key from Password & Room ID
 export const deriveKeyFromPassword = async (password: string, roomID: string): Promise<Uint8Array> => {
-  await initSodium();
+  await sodium.ready; // ✅ Ensure sodium is initialized before calling
+  if (!password) throw new Error("Password is required for key derivation");
 
   const salt = sodium.crypto_generichash(16, sodium.from_string(roomID)); // 16-byte salt
   return sodium.crypto_pwhash(
     32, // 32-byte key for XChaCha20-Poly1305
-    password,
+    sodium.from_string(password), // ✅ Ensure password is converted to Uint8Array
     salt,
-    sodium.crypto_pwhash_OPSLIMIT_MODERATE,
-    sodium.crypto_pwhash_MEMLIMIT_MODERATE,
+    sodium.crypto_pwhash_OPSLIMIT_INTERACTIVE, // 🔧 Make sure it's set to INTERACTIVE (not MODERATE)
+    sodium.crypto_pwhash_MEMLIMIT_INTERACTIVE,
     sodium.crypto_pwhash_ALG_DEFAULT
   );
 };
+
 
 // Encrypt a Message using XChaCha20-Poly1305
 export const encryptMessage = async (message: string, key: Uint8Array): Promise<string> => {
@@ -50,14 +52,13 @@ export const encryptMessage = async (message: string, key: Uint8Array): Promise<
   return `${sodium.to_base64(nonce)}:${sodium.to_base64(encrypted)}`;
 };
 
-// Decrypt a Message
 export const decryptMessage = async (ciphertext: string, key: Uint8Array): Promise<string> => {
   try {
-    await initSodium();
+    await sodium.ready;
 
+    if (!ciphertext.includes(":")) throw new Error("Invalid ciphertext format");
+    
     const [nonceB64, encryptedB64] = ciphertext.split(":");
-    if (!nonceB64 || !encryptedB64) throw new Error("Invalid ciphertext format");
-
     const nonce = sodium.from_base64(nonceB64);
     const encrypted = sodium.from_base64(encryptedB64);
 
@@ -65,6 +66,6 @@ export const decryptMessage = async (ciphertext: string, key: Uint8Array): Promi
     return sodium.to_string(decrypted); // Convert Uint8Array back to string
   } catch (error) {
     console.error("Decryption failed:", error);
-    return "[Decryption Error]";
+    return "[Decryption Error]"; // ✅ Prevents crashes
   }
 };
