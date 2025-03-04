@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { deriveKeyFromRoom, decryptMessage } from "../utils/cryptoUtils";
 import { createRoom, generateRoomId } from "../utils/trysteroUtils";
 import { handleJoinRoom } from "../utils/roomUtils";
@@ -13,35 +13,37 @@ type Message = {
   timestamp: number;
 };
 
+const messageLifetime = 60 * 60 * 1000; // 1 hour
+const messageCooldown = 1000; // 1-second cooldown
+
 const Chat = () => {
-  const [roomId, setRoomId] = useState<string>(() => sessionStorage.getItem("echomesh-room") || generateRoomId());
+  const [roomId, setRoomId] = useState(() => sessionStorage.getItem("echomesh-room") || generateRoomId());
   const [messages, setMessages] = useState<Message[]>([]);
-  const [message, setMessage] = useState<string>("");
-  const [customRoom, setCustomRoom] = useState<string>("");
+  const [message, setMessage] = useState("");
+  const [customRoom, setCustomRoom] = useState("");
   const [encryptionKey, setEncryptionKey] = useState<CryptoKey | null>(null);
+  const [lastMessageTime, setLastMessageTime] = useState(0);
+
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  const [lastMessageTime, setLastMessageTime] = useState(0);
-  const messageCooldown = 1000; // 1-second cooldown
-  const messageLifetime = 60 * 60 * 1000; // 1 hour
+  const { sendMessage, getMessage } = createRoom(roomId);
 
   useEffect(() => {
     sessionStorage.setItem("echomesh-room", roomId);
     deriveKeyFromRoom(roomId)
       .then(setEncryptionKey)
-      .catch((err) => console.error("Key derivation failed:", err));
+      .catch(console.error);
   }, [roomId]);
 
   useEffect(() => {
-    const cleanupInterval = setInterval(() => {
+    const cleanupMessages = () => {
       setMessages((prev) => prev.filter((msg) => Date.now() - msg.timestamp < messageLifetime));
-    }, 60000);
+    };
 
+    const cleanupInterval = setInterval(cleanupMessages, 60000);
     return () => clearInterval(cleanupInterval);
   }, []);
-
-  const { sendMessage, getMessage } = createRoom(roomId);
 
   useEffect(() => {
     if (!encryptionKey) return;
@@ -53,14 +55,17 @@ const Chat = () => {
   }, [encryptionKey]);
 
   useEffect(() => {
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 100);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  const handleRoomJoin = useCallback(
+    (room: string) => handleJoinRoom(room, setRoomId, setMessages, setCustomRoom),
+    []
+  );
 
   return (
     <div className="chat-container">
@@ -86,15 +91,10 @@ const Chat = () => {
           onChange={(e) => setCustomRoom(e.target.value)}
           placeholder="Enter Room ID..."
         />
-        <button
-          onClick={() => handleJoinRoom(customRoom, setRoomId, setMessages, setCustomRoom)}
-          disabled={!customRoom.trim()}
-        >
+        <button onClick={() => handleRoomJoin(customRoom)} disabled={!customRoom.trim()}>
           Join
         </button>
-        <button
-          onClick={() => handleJoinRoom(generateRoomId(), setRoomId, setMessages, setCustomRoom)}
-        >
+        <button onClick={() => handleRoomJoin(generateRoomId())}>
           New
         </button>
       </div>
@@ -114,7 +114,7 @@ const Chat = () => {
       {/* Message Input */}
       <div className="message-input">
         <input
-          ref={inputRef}  
+          ref={inputRef}
           type="text"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
@@ -130,8 +130,7 @@ const Chat = () => {
               setMessage,
               lastMessageTime,
               setLastMessageTime,
-              messageCooldown,
-              setRoomId
+              messageCooldown
             )
           }
         />
@@ -146,8 +145,7 @@ const Chat = () => {
               setMessage,
               lastMessageTime,
               setLastMessageTime,
-              messageCooldown,
-              setRoomId
+              messageCooldown
             )
           }
         >
