@@ -17,7 +17,14 @@ const messageLifetime = 60 * 60 * 1000; // 1 hour
 const messageCooldown = 1000; // 1-second cooldown
 
 const Chat = () => {
-  const [roomId, setRoomId] = useState(() => sessionStorage.getItem("echomesh-room") || generateRoomId());
+  const [roomData, setRoomData] = useState(() => {
+    const storedRoom = sessionStorage.getItem("echomesh-room");
+    const storedPassword = sessionStorage.getItem("echomesh-room-password");
+    return storedRoom
+      ? { id: storedRoom, password: storedPassword || "" }
+      : generateRoomId();
+  });
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState("");
   const [customRoom, setCustomRoom] = useState("");
@@ -27,14 +34,16 @@ const Chat = () => {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  const { sendMessage, getMessage } = createRoom(roomId);
+  const { sendMessage, getMessage } = createRoom(roomData.id);
 
   useEffect(() => {
-    sessionStorage.setItem("echomesh-room", roomId);
-    deriveKeyFromRoom(roomId)
+    sessionStorage.setItem("echomesh-room", roomData.id);
+    sessionStorage.setItem("echomesh-room-password", roomData.password);
+
+    deriveKeyFromRoom(roomData.id)
       .then(setEncryptionKey)
       .catch(console.error);
-  }, [roomId]);
+  }, [roomData]);
 
   useEffect(() => {
     const cleanupMessages = () => {
@@ -63,7 +72,7 @@ const Chat = () => {
   }, []);
 
   const handleRoomJoin = useCallback(
-    (room: string) => handleJoinRoom(room, setRoomId, setMessages, setCustomRoom),
+    (room: string) => handleJoinRoom(room, setRoomData, setMessages, setCustomRoom),
     []
   );
 
@@ -74,11 +83,12 @@ const Chat = () => {
         <h3>EchoMesh</h3>
         <small 
           onClick={() => {
-            navigator.clipboard.writeText(roomId);
-            alert("Room ID copied to clipboard!");
+            navigator.clipboard.writeText(`${roomData.id} (Password: ${roomData.password})`);
+            alert("Room ID and password copied to clipboard!");
           }}
         >
-          Room: {roomId}
+          Room: {roomData.id} <br />
+          Password: {roomData.password}
         </small>
       </div>
 
@@ -94,7 +104,15 @@ const Chat = () => {
         <button onClick={() => handleRoomJoin(customRoom)} disabled={!customRoom.trim()}>
           Join
         </button>
-        <button onClick={() => handleRoomJoin(generateRoomId())}>
+        <button
+          onClick={() => {
+            const newRoom = generateRoomId();
+            setRoomData(newRoom);
+            sessionStorage.setItem("echomesh-room", newRoom.id);
+            sessionStorage.setItem("echomesh-room-password", newRoom.password);
+            alert(`New room created!\nRoom ID: ${newRoom.id}\nPassword: ${newRoom.password}`);
+          }}
+        >
           New
         </button>
       </div>
@@ -123,7 +141,7 @@ const Chat = () => {
             e.key === "Enter" &&
             handleSend(
               message,
-              roomId,
+              roomData.id,
               encryptionKey,
               sendMessage,
               setMessages,
@@ -138,7 +156,7 @@ const Chat = () => {
           onClick={() =>
             handleSend(
               message,
-              roomId,
+              roomData.id,
               encryptionKey,
               sendMessage,
               setMessages,
