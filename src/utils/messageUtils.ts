@@ -11,6 +11,7 @@ export const handleSend = async (
   roomId: string,
   encryptionKey: CryptoKey | null,
   sendMessage: SendMessageFunction,
+  setRoomId: (roomId: string) => void,
   setMessages: SetMessagesFunction,
   setMessage: SetMessageFunction,
   lastMessageTime: number,
@@ -29,7 +30,7 @@ export const handleSend = async (
   setLastMessageTime(now);
 
   if (message.startsWith("/")) {
-    handleCommand({ message, roomId, setRoomId: () => {}, setMessages, setMessage });
+    handleCommand({ message, roomId, setRoomId, setMessages, setMessage }); // ✅ Passing actual setRoomId
     setMessage("");
     return;
   }

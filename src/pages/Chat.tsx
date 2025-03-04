@@ -24,6 +24,12 @@ const Chat = () => {
       ? { id: storedRoom, password: storedPassword || "" }
       : generateRoomId();
   });
+  
+  // ✅ Function to update only the room ID
+  const setRoomId = (newRoomId: string) => {
+    setRoomData((prev) => ({ ...prev, id: newRoomId }));
+  };
+  
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState("");
@@ -144,6 +150,7 @@ const Chat = () => {
               roomData.id,
               encryptionKey,
               sendMessage,
+              setRoomId,
               setMessages,
               setMessage,
               lastMessageTime,
@@ -159,6 +166,7 @@ const Chat = () => {
               roomData.id,
               encryptionKey,
               sendMessage,
+              setRoomId,
               setMessages,
               setMessage,
               lastMessageTime,
