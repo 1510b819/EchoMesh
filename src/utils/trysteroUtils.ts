@@ -9,14 +9,25 @@ export const createRoom = (roomId: string) => {
 };
 
 export const generateRoomId = () => {
-    const randomBytes = crypto.getRandomValues(new Uint8Array(6)); // 6 bytes = 12 base36 chars
-    const randomId = Array.from(randomBytes)
-      .map((byte) => byte.toString(36).padStart(2, "0")) // Base36 encoding
-      .join("")
-      .slice(0, 12); // Ensure exactly 12 chars
+  const randomBytes = crypto.getRandomValues(new Uint8Array(6));
+  const randomId = Array.from(randomBytes)
+    .map((byte) => byte.toString(36).padStart(2, "0"))
+    .join("")
+    .slice(0, 12);
+
+  const passwordBytes = crypto.getRandomValues(new Uint8Array(4));
+  const password = Array.from(passwordBytes)
+    .map((byte) => (byte % 36).toString(36)) // Convert to alphanumeric
+    .join("")
+    .slice(0, 6); // 6-character password
+
+  const newRoom = { id: `room-${randomId}`, password };
   
-    return `room-${randomId}`;
-  };
+  sessionStorage.setItem("echomesh-room-password", password); // Store password for creator
+
+  return newRoom;
+};
+
   
   
   
