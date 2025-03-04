@@ -4,7 +4,6 @@ import { createRoom, generateRoomId } from "../utils/trysteroUtils";
 import { handleJoinRoom } from "../utils/roomUtils";
 import { handleSend } from "../utils/messageUtils";
 import DOMPurify from "dompurify";
-import sodium from "libsodium-wrappers";
 
 // Import the CSS file
 import "./Chat.css";
@@ -15,10 +14,11 @@ type Message = {
   timestamp: number;
 };
 
-const messageLifetime = 60 * 60 * 1000; // 1 hour
-const messageCooldown = 1000; // 1-second cooldown
+const MESSAGE_LIFETIME = 60 * 60 * 1000; // 1 hour
+const MESSAGE_COOLDOWN = 1000; // 1-second cooldown
 
 const Chat = () => {
+  // 🔹 Load stored session data or generate a new room
   const [roomData, setRoomData] = useState(() => {
     const storedRoom = sessionStorage.getItem("echomesh-room");
     const storedPassword = sessionStorage.getItem("echomesh-room-password");
@@ -26,11 +26,6 @@ const Chat = () => {
       ? { id: storedRoom, password: storedPassword || "" }
       : generateRoomId();
   });
-
-  // ✅ Function to update only the room ID
-  const setRoomId = (newRoomId: string) => {
-    setRoomData((prev) => ({ ...prev, id: newRoomId }));
-  };
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState("");
@@ -43,9 +38,20 @@ const Chat = () => {
 
   const { sendMessage, getMessage } = createRoom(roomData.id);
 
+  // ✅ Function to update only the room ID
+  const setRoomId = (newRoomId: string) => {
+    setRoomData((prev) => ({ ...prev, id: newRoomId }));
+  };
+
+  // 🔐 Derive encryption key when password changes
   useEffect(() => {
     const deriveKey = async () => {
-      await sodium.ready; // ✅ Ensure sodium is fully loaded
+      if (!roomData.password) {
+        console.warn("No password provided, encryption is disabled.");
+        setEncryptionKey(null);
+        return;
+      }
+
       try {
         const key = await deriveKeyFromPassword(roomData.password, roomData.id);
         setEncryptionKey(key);
@@ -53,19 +59,15 @@ const Chat = () => {
         console.error("Key derivation failed:", error);
       }
     };
-  
-    if (roomData.password) {
-      deriveKey();
-    } else {
-      console.warn("No password provided, encryption is disabled.");
-    }
-  }, [roomData]);
-  
-  
+
+    deriveKey();
+  }, [roomData.password, roomData.id]);
+
+  // 🧹 Cleanup old messages every minute
   useEffect(() => {
     const cleanupMessages = () => {
       setMessages((prev) =>
-        prev.filter((msg) => Date.now() - msg.timestamp < messageLifetime)
+        prev.filter((msg) => Date.now() - msg.timestamp < MESSAGE_LIFETIME)
       );
     };
 
@@ -73,6 +75,7 @@ const Chat = () => {
     return () => clearInterval(cleanupInterval);
   }, []);
 
+  // 📩 Handle incoming encrypted messages
   useEffect(() => {
     if (!encryptionKey) return;
 
@@ -89,16 +92,19 @@ const Chat = () => {
     };
 
     getMessage(messageHandler);
-  }, [encryptionKey, getMessage]); // ✅ Added getMessage dependency
+  }, [encryptionKey, getMessage]);
 
+  // 🔽 Auto-scroll to latest message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // ⌨️ Auto-focus input field on mount
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
+  // 🏠 Handle room joining
   const handleRoomJoin = useCallback(
     (room: string) => handleJoinRoom(room, setRoomData, setMessages, setCustomRoom),
     []
@@ -106,7 +112,7 @@ const Chat = () => {
 
   return (
     <div className="chat-container">
-      {/* Header */}
+      {/* 🔹 Header */}
       <div className="chat-header">
         <h3>EchoMesh</h3>
         <small>
@@ -132,7 +138,7 @@ const Chat = () => {
         </small>
       </div>
 
-      {/* Room Controls */}
+      {/* 🔹 Room Controls */}
       <div className="room-controls">
         <input
           ref={inputRef}
@@ -157,7 +163,7 @@ const Chat = () => {
         </button>
       </div>
 
-      {/* Message Display */}
+      {/* 🔹 Message Display */}
       <div className="message-display">
         {messages.map((msg, index) => (
           <div key={index} className={`message ${msg.sender === "Me" ? "me" : ""}`}>
@@ -170,43 +176,43 @@ const Chat = () => {
         <div ref={messagesEndRef}></div>
       </div>
 
-      {/* Message Input */}
+      {/* 🔹 Message Input */}
       <div className="message-input">
         <input
           ref={inputRef}
           type="text"
           value={message}
-          onChange={(e) => setMessage(DOMPurify.sanitize(e.target.value))} // 🛡️ Sanitize while typing
+          onChange={(e) => setMessage(DOMPurify.sanitize(e.target.value))}
           placeholder="> Type a message..."
           onKeyDown={(e) =>
             e.key === "Enter" &&
             handleSend(
-              DOMPurify.sanitize(message), // 🛡️ Sanitize before sending
+              DOMPurify.sanitize(message),
               roomData.id,
-              encryptionKey, // ✅ Uses Uint8Array encryptionKey
+              encryptionKey,
               sendMessage,
               setRoomId,
               setMessages,
               setMessage,
               lastMessageTime,
               setLastMessageTime,
-              messageCooldown
+              MESSAGE_COOLDOWN
             )
           }
         />
         <button
           onClick={() =>
             handleSend(
-              DOMPurify.sanitize(message), // 🛡️ Sanitize before sending
+              DOMPurify.sanitize(message),
               roomData.id,
-              encryptionKey, // ✅ Uses Uint8Array encryptionKey
+              encryptionKey,
               sendMessage,
               setRoomId,
               setMessages,
               setMessage,
               lastMessageTime,
               setLastMessageTime,
-              messageCooldown
+              MESSAGE_COOLDOWN
             )
           }
         >
