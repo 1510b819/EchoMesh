@@ -3,9 +3,10 @@ import { deriveKeyFromPassword, decryptMessage } from "../utils/cryptoUtils";
 import { createRoom, generateRoomId } from "../utils/trysteroUtils";
 import { handleJoinRoom } from "../utils/roomUtils";
 import { handleSend } from "../utils/messageUtils";
+import DOMPurify from "dompurify";
 
 // Import the CSS file
-import './Chat.css';
+import "./Chat.css";
 
 type Message = {
   text: string;
@@ -24,12 +25,11 @@ const Chat = () => {
       ? { id: storedRoom, password: storedPassword || "" }
       : generateRoomId();
   });
-  
+
   // ✅ Function to update only the room ID
   const setRoomId = (newRoomId: string) => {
     setRoomData((prev) => ({ ...prev, id: newRoomId }));
   };
-  
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState("");
@@ -52,10 +52,11 @@ const Chat = () => {
       .catch(console.error);
   }, [roomData]);
 
-
   useEffect(() => {
     const cleanupMessages = () => {
-      setMessages((prev) => prev.filter((msg) => Date.now() - msg.timestamp < messageLifetime));
+      setMessages((prev) =>
+        prev.filter((msg) => Date.now() - msg.timestamp < messageLifetime)
+      );
     };
 
     const cleanupInterval = setInterval(cleanupMessages, 60000);
@@ -67,7 +68,10 @@ const Chat = () => {
 
     getMessage(async (encryptedMsg, peerId) => {
       const decryptedMsg = await decryptMessage(encryptedMsg, encryptionKey);
-      setMessages((prev) => [...prev, { text: decryptedMsg, sender: peerId, timestamp: Date.now() }]);
+      setMessages((prev) => [
+        ...prev,
+        { text: DOMPurify.sanitize(decryptedMsg), sender: peerId, timestamp: Date.now() },
+      ]);
     });
   }, [encryptionKey]);
 
@@ -90,27 +94,26 @@ const Chat = () => {
       <div className="chat-header">
         <h3>EchoMesh</h3>
         <small>
-        <span 
-          onClick={() => {
-            navigator.clipboard.writeText(roomData.id);
-            alert("Room ID copied to clipboard!");
-          }}
-          style={{ cursor: "pointer", textDecoration: "underline" }}
-        >
-          Room: {roomData.id}
-        </span>
-        <br />
-        <span 
-          onClick={() => {
-            navigator.clipboard.writeText(roomData.password);
-            alert("Password copied to clipboard!");
-          }}
-          style={{ cursor: "pointer", textDecoration: "underline" }}
-        >
-          Password: {roomData.password}
-        </span>
-      </small>
-
+          <span
+            onClick={() => {
+              navigator.clipboard.writeText(roomData.id);
+              alert("Room ID copied to clipboard!");
+            }}
+            style={{ cursor: "pointer", textDecoration: "underline" }}
+          >
+            Room: {roomData.id}
+          </span>
+          <br />
+          <span
+            onClick={() => {
+              navigator.clipboard.writeText(roomData.password);
+              alert("Password copied to clipboard!");
+            }}
+            style={{ cursor: "pointer", textDecoration: "underline" }}
+          >
+            Password: {roomData.password}
+          </span>
+        </small>
       </div>
 
       {/* Room Controls */}
@@ -143,7 +146,8 @@ const Chat = () => {
         {messages.map((msg, index) => (
           <div key={index} className={`message ${msg.sender === "Me" ? "me" : ""}`}>
             <p>
-              <strong>{msg.sender}:</strong> {msg.text}
+              <strong>{msg.sender}:</strong>{" "}
+              <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.text) }}></span>
             </p>
           </div>
         ))}
@@ -156,12 +160,12 @@ const Chat = () => {
           ref={inputRef}
           type="text"
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={(e) => setMessage(DOMPurify.sanitize(e.target.value))} // 🛡️ Sanitize while typing
           placeholder="> Type a message..."
           onKeyDown={(e) =>
             e.key === "Enter" &&
             handleSend(
-              message,
+              DOMPurify.sanitize(message), // 🛡️ Sanitize before sending
               roomData.id,
               encryptionKey,
               sendMessage,
@@ -177,7 +181,7 @@ const Chat = () => {
         <button
           onClick={() =>
             handleSend(
-              message,
+              DOMPurify.sanitize(message), // 🛡️ Sanitize before sending
               roomData.id,
               encryptionKey,
               sendMessage,
