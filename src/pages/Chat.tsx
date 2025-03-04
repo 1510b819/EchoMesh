@@ -87,15 +87,28 @@ const Chat = () => {
       {/* Header */}
       <div className="chat-header">
         <h3>EchoMesh</h3>
-        <small 
+        <small>
+        <span 
           onClick={() => {
-            navigator.clipboard.writeText(`${roomData.id} (Password: ${roomData.password})`);
-            alert("Room ID and password copied to clipboard!");
+            navigator.clipboard.writeText(roomData.id);
+            alert("Room ID copied to clipboard!");
           }}
+          style={{ cursor: "pointer", textDecoration: "underline" }}
         >
-          Room: {roomData.id} <br />
+          Room: {roomData.id}
+        </span>
+        <br />
+        <span 
+          onClick={() => {
+            navigator.clipboard.writeText(roomData.password);
+            alert("Password copied to clipboard!");
+          }}
+          style={{ cursor: "pointer", textDecoration: "underline" }}
+        >
           Password: {roomData.password}
-        </small>
+        </span>
+      </small>
+
       </div>
 
       {/* Room Controls */}
