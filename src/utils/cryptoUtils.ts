@@ -1,9 +1,17 @@
-import sodium from "libsodium-wrappers";  // ✅ Correct import
+import sodium from "libsodium-wrappers-sumo"; // ✅ Ensure all functions are available
 
 // ✅ Initialize Sodium Once
 const initSodium = async () => {
-  await sodium.ready; 
-  console.log("🔹 Sodium is ready!", sodium);
+  await sodium.ready;
+  console.log("🔹 Sodium is ready!");
+
+  // ✅ Print all available Sodium functions
+  console.log("🔹 Available Sodium functions:", Object.keys(sodium));
+
+  // ✅ Check if `crypto_pwhash` exists
+  if (!sodium.crypto_pwhash) {
+    console.error("❌ crypto_pwhash function is unavailable. Check Libsodium import.");
+  }
 };
 
 initSodium(); // 🚀 Load sodium at startup
@@ -23,23 +31,23 @@ export const base64ToArrayBuffer = (base64: string): Uint8Array => {
 
 // 📌 Derive a Secure Encryption Key from Password & Room ID
 export const deriveKeyFromPassword = async (password: string, roomID: string): Promise<Uint8Array> => {
-  await sodium.ready; // ✅ Ensure sodium is initialized before anything else
-  
+  await sodium.ready; // ✅ Ensure sodium is initialized
+
   console.log("🔹 Sodium functions available:", Object.keys(sodium)); // ✅ Debugging
 
   if (!sodium.crypto_pwhash) {
-    throw new Error("crypto_pwhash function is unavailable. Check Libsodium import.");
+    throw new Error("❌ crypto_pwhash function is unavailable. Check Libsodium import.");
   }
-  
-  if (!password) throw new Error("Password is required for key derivation");
+
+  if (!password) throw new Error("❌ Password is required for key derivation");
 
   const salt = sodium.crypto_generichash(16, sodium.from_string(roomID)); // 16-byte salt
 
-  return await sodium.crypto_pwhash( // ✅ Use `await` for consistency
-    32, // 32-byte key for XChaCha20-Poly1305
+  return sodium.crypto_pwhash( // ✅ Derive a 32-byte key for XChaCha20-Poly1305
+    32,
     sodium.from_string(password),
     salt,
-    sodium.crypto_pwhash_OPSLIMIT_INTERACTIVE, 
+    sodium.crypto_pwhash_OPSLIMIT_INTERACTIVE,
     sodium.crypto_pwhash_MEMLIMIT_INTERACTIVE,
     sodium.crypto_pwhash_ALG_DEFAULT
   );
@@ -47,9 +55,9 @@ export const deriveKeyFromPassword = async (password: string, roomID: string): P
 
 // 📌 Encrypt a Message using XChaCha20-Poly1305
 export const encryptMessage = async (message: string, key: Uint8Array): Promise<string> => {
-  await sodium.ready; // ✅ Ensures sodium is loaded
+  await sodium.ready; // ✅ Ensure sodium is loaded
 
-  const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES); // Random nonce
+  const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES); // Generate a random nonce
   const encrypted = sodium.crypto_secretbox_easy(sodium.from_string(message), nonce, key);
 
   return `${sodium.to_base64(nonce)}:${sodium.to_base64(encrypted)}`; // ✅ Return nonce + ciphertext
@@ -61,7 +69,7 @@ export const decryptMessage = async (ciphertext: string, key: Uint8Array): Promi
     await sodium.ready;
 
     const [nonceB64, encryptedB64] = ciphertext.split(":");
-    if (!nonceB64 || !encryptedB64) throw new Error("Invalid ciphertext format");
+    if (!nonceB64 || !encryptedB64) throw new Error("❌ Invalid ciphertext format");
 
     const nonce = sodium.from_base64(nonceB64);
     const encrypted = sodium.from_base64(encryptedB64);
@@ -69,7 +77,7 @@ export const decryptMessage = async (ciphertext: string, key: Uint8Array): Promi
 
     return sodium.to_string(decrypted); // ✅ Convert Uint8Array back to string
   } catch (error) {
-    console.error("Decryption failed:", error);
+    console.error("❌ Decryption failed:", error);
     return "[Decryption Error]"; // ✅ Prevents crashes
   }
 };
