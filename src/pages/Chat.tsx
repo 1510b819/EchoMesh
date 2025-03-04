@@ -34,7 +34,7 @@ const Chat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState("");
   const [customRoom, setCustomRoom] = useState("");
-  const [encryptionKey, setEncryptionKey] = useState<CryptoKey | null>(null);
+  const [encryptionKey, setEncryptionKey] = useState<Uint8Array | null>(null);
   const [lastMessageTime, setLastMessageTime] = useState(0);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -46,7 +46,7 @@ const Chat = () => {
     sessionStorage.setItem("echomesh-room", roomData.id);
     sessionStorage.setItem("echomesh-room-password", roomData.password);
 
-    // Derive the encryption key properly
+    // 🔑 Update to derive a Uint8Array key instead of CryptoKey
     deriveKeyFromPassword(roomData.password, roomData.id)
       .then(setEncryptionKey)
       .catch(console.error);
@@ -66,14 +66,20 @@ const Chat = () => {
   useEffect(() => {
     if (!encryptionKey) return;
 
-    getMessage(async (encryptedMsg, peerId) => {
-      const decryptedMsg = await decryptMessage(encryptedMsg, encryptionKey);
-      setMessages((prev) => [
-        ...prev,
-        { text: DOMPurify.sanitize(decryptedMsg), sender: peerId, timestamp: Date.now() },
-      ]);
-    });
-  }, [encryptionKey]);
+    const messageHandler = async (encryptedMsg: string, peerId: string) => {
+      try {
+        const decryptedMsg = await decryptMessage(encryptedMsg, encryptionKey);
+        setMessages((prev) => [
+          ...prev,
+          { text: DOMPurify.sanitize(decryptedMsg), sender: peerId, timestamp: Date.now() },
+        ]);
+      } catch (error) {
+        console.error("Message decryption failed:", error);
+      }
+    };
+
+    getMessage(messageHandler);
+  }, [encryptionKey, getMessage]); // ✅ Added getMessage dependency
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -167,7 +173,7 @@ const Chat = () => {
             handleSend(
               DOMPurify.sanitize(message), // 🛡️ Sanitize before sending
               roomData.id,
-              encryptionKey,
+              encryptionKey, // ✅ Uses Uint8Array encryptionKey
               sendMessage,
               setRoomId,
               setMessages,
@@ -183,7 +189,7 @@ const Chat = () => {
             handleSend(
               DOMPurify.sanitize(message), // 🛡️ Sanitize before sending
               roomData.id,
-              encryptionKey,
+              encryptionKey, // ✅ Uses Uint8Array encryptionKey
               sendMessage,
               setRoomId,
               setMessages,
