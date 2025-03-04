@@ -130,7 +130,8 @@ const Chat = () => {
               setMessage,
               lastMessageTime,
               setLastMessageTime,
-              messageCooldown
+              messageCooldown,
+              setRoomId
             )
           }
         />
@@ -145,7 +146,8 @@ const Chat = () => {
               setMessage,
               lastMessageTime,
               setLastMessageTime,
-              messageCooldown
+              messageCooldown,
+              setRoomId
             )
           }
         >
