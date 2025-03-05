@@ -8,15 +8,6 @@ import DOMPurify from "dompurify";
 // Import the CSS file
 import "./Chat.css";
 
-const encodePassword = (password: string) => btoa(password); // Simple obfuscation
-const decodePassword = (encoded: string) => {
-  try {
-    return atob(encoded);
-  } catch {
-    return ""; // Prevent errors if invalid
-  }
-};
-
 type Message = {
   text: string;
   sender: string;
@@ -27,44 +18,65 @@ const MESSAGE_LIFETIME = 60 * 60 * 1000; // 1 hour
 const MESSAGE_COOLDOWN = 1000; // 1-second cooldown
 
 const Chat = () => {
+  // 🔹 Load stored session data or generate a new room
   const [roomData, setRoomData] = useState(() => {
-    const storedRoom = sessionStorage.getItem("echomesh-room");
-    return storedRoom ? { id: storedRoom, password: "" } : generateRoomId();
+    const storedRoom = sessionStorage.getItem("echomesh-room"); // Keep roomId stored
+    return storedRoom ? { id: storedRoom, password: "" } : generateRoomId(); // Don't load password from storage
   });
+  
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState("");
   const [customRoom, setCustomRoom] = useState("");
-  const [obfuscatedPassword, setObfuscatedPassword] = useState(""); // Obfuscated password for UI
   const [encryptionKey, setEncryptionKey] = useState<Uint8Array | null>(null);
   const [lastMessageTime, setLastMessageTime] = useState(0);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const passwordInputRef = useRef<HTMLInputElement | null>(null);
 
   const { sendMessage, getMessage } = createRoom(roomData.id);
 
+  // ✅ Function to update only the room ID
+  const setRoomId = (newRoomId: string) => {
+    setRoomData((prev) => ({ ...prev, id: newRoomId }));
+  };
+
+  // 🔐 Derive encryption key when password changes
   useEffect(() => {
-    if (!roomData.password) {
-      setEncryptionKey(null);
-      return;
-    }
-    deriveKeyFromPassword(roomData.password, roomData.id)
-      .then(setEncryptionKey)
-      .catch(console.error);
+    const deriveKey = async () => {
+      if (!roomData.password) {
+        console.warn("No password provided, encryption is disabled.");
+        setEncryptionKey(null);
+        return;
+      }
+
+      try {
+        const key = await deriveKeyFromPassword(roomData.password, roomData.id);
+        setEncryptionKey(key);
+      } catch (error) {
+        console.error("Key derivation failed:", error);
+      }
+    };
+
+    deriveKey();
   }, [roomData.password, roomData.id]);
 
+  // 🧹 Cleanup old messages every minute
   useEffect(() => {
     const cleanupMessages = () => {
-      setMessages((prev) => prev.filter((msg) => Date.now() - msg.timestamp < MESSAGE_LIFETIME));
+      setMessages((prev) =>
+        prev.filter((msg) => Date.now() - msg.timestamp < MESSAGE_LIFETIME)
+      );
     };
-    const interval = setInterval(cleanupMessages, 60000);
-    return () => clearInterval(interval);
+
+    const cleanupInterval = setInterval(cleanupMessages, 60000);
+    return () => clearInterval(cleanupInterval);
   }, []);
 
+  // 📩 Handle incoming encrypted messages
   useEffect(() => {
     if (!encryptionKey) return;
+
     const messageHandler = async (encryptedMsg: string, peerId: string) => {
       try {
         const decryptedMsg = await decryptMessage(encryptedMsg, encryptionKey);
@@ -76,17 +88,21 @@ const Chat = () => {
         console.error("Message decryption failed:", error);
       }
     };
+
     getMessage(messageHandler);
   }, [encryptionKey, getMessage]);
 
+  // 🔽 Auto-scroll to latest message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // ⌨️ Auto-focus input field on mount
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
+  // 🏠 Handle room joining
   const handleRoomJoin = useCallback(
     (room: string) => handleJoinRoom(room, setRoomData, setMessages, setCustomRoom),
     []
@@ -110,14 +126,12 @@ const Chat = () => {
           <br />
           <span
             onClick={() => {
-              const encoded = encodePassword(roomData.password);
-              setObfuscatedPassword(encoded); // Store obfuscated version for UI
-              navigator.clipboard.writeText(encoded);
-              alert("Obfuscated Password copied to clipboard!");
+              navigator.clipboard.writeText(roomData.password);
+              alert("Password copied to clipboard!");
             }}
             style={{ cursor: "pointer", textDecoration: "underline" }}
           >
-            Password: {obfuscatedPassword || "********"}
+            Password: {roomData.password}
           </span>
         </small>
       </div>
@@ -135,35 +149,17 @@ const Chat = () => {
           Join
         </button>
         <button
-          onClick={() => {
-            const newRoom = generateRoomId();
-            setRoomData(newRoom);
-            sessionStorage.setItem("echomesh-room", newRoom.id);
-            alert(`New room created!\nRoom ID: ${newRoom.id}\nObfuscated Password: ${encodePassword(newRoom.password)}\n\n⚠️ Please save this password!`);
-          }}
-        >
-          New
-        </button>
-      </div>
-
-      {/* 🔹 Password Input (Handles Paste) */}
-      <div className="password-input">
-        <input
-          ref={passwordInputRef}
-          type="text"
-          placeholder="Paste Obfuscated Password..."
-          onPaste={(e) => {
-            e.preventDefault();
-            const pastedText = e.clipboardData.getData("text");
-            const decoded = decodePassword(pastedText);
-            if (decoded) {
-              setRoomData((prev) => ({ ...prev, password: decoded }));
-              alert("Password successfully decoded and set!");
-            } else {
-              alert("Invalid password format!");
-            }
-          }}
-        />
+        onClick={() => {
+          const newRoom = generateRoomId();
+          setRoomData(newRoom);
+          sessionStorage.setItem("echomesh-room", newRoom.id); // ✅ Only storing roomId
+          alert(
+            `New room created!\nRoom ID: ${newRoom.id}\nPassword: ${newRoom.password}\n\n⚠️ Please save this password! You will lose access if you refresh.`
+          );
+        }}
+      >
+        New
+      </button>
       </div>
 
       {/* 🔹 Message Display */}
@@ -194,7 +190,7 @@ const Chat = () => {
               roomData.id,
               encryptionKey,
               sendMessage,
-              () => {},
+              setRoomId,
               setMessages,
               setMessage,
               lastMessageTime,
@@ -210,7 +206,7 @@ const Chat = () => {
               roomData.id,
               encryptionKey,
               sendMessage,
-              () => {},
+              setRoomId,
               setMessages,
               setMessage,
               lastMessageTime,
