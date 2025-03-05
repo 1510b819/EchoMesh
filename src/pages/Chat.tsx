@@ -1,11 +1,12 @@
+// Chat.tsx
 import { useState, useEffect, useRef, useCallback } from "react";
 import { deriveKeyFromPassword, decryptMessage } from "../utils/cryptoUtils";
 import { createRoom, generateRoomId } from "../utils/trysteroUtils";
 import { handleJoinRoom } from "../utils/roomUtils";
 import { handleSend } from "../utils/messageUtils";
 import DOMPurify from "dompurify";
+import Alert from "../components/Alert"; // Import the Alert component
 
-// Import the CSS file
 import "./Chat.css";
 
 type Message = {
@@ -24,24 +25,22 @@ const Chat = () => {
     return storedRoom ? { id: storedRoom, password: "" } : generateRoomId(); // Don't load password from storage
   });
   
-
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState("");
   const [customRoom, setCustomRoom] = useState("");
   const [encryptionKey, setEncryptionKey] = useState<Uint8Array | null>(null);
   const [lastMessageTime, setLastMessageTime] = useState(0);
+  const [alertMessage, setAlertMessage] = useState<string | null>(null); // State for alert message
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const { sendMessage, getMessage } = createRoom(roomData.id);
 
-  // ✅ Function to update only the room ID
   const setRoomId = (newRoomId: string) => {
     setRoomData((prev) => ({ ...prev, id: newRoomId }));
   };
 
-  // 🔐 Derive encryption key when password changes
   useEffect(() => {
     const deriveKey = async () => {
       if (!roomData.password) {
@@ -61,7 +60,6 @@ const Chat = () => {
     deriveKey();
   }, [roomData.password, roomData.id]);
 
-  // 🧹 Cleanup old messages every minute
   useEffect(() => {
     const cleanupMessages = () => {
       setMessages((prev) =>
@@ -73,7 +71,6 @@ const Chat = () => {
     return () => clearInterval(cleanupInterval);
   }, []);
 
-  // 📩 Handle incoming encrypted messages
   useEffect(() => {
     if (!encryptionKey) return;
 
@@ -92,24 +89,29 @@ const Chat = () => {
     getMessage(messageHandler);
   }, [encryptionKey, getMessage]);
 
-  // 🔽 Auto-scroll to latest message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // ⌨️ Auto-focus input field on mount
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
-  // 🏠 Handle room joining
   const handleRoomJoin = useCallback(
     (room: string) => handleJoinRoom(room, setRoomData, setMessages, setCustomRoom),
     []
   );
 
+  const showAlert = (message: string) => {
+    setAlertMessage(message);
+    setTimeout(() => setAlertMessage(null), 3000); // Hide alert after 3 seconds
+  };
+
   return (
     <div className="chat-container">
+      {/* Display the alert component */}
+      {alertMessage && <Alert message={alertMessage} onClose={() => setAlertMessage(null)} />}
+
       {/* 🔹 Header */}
       <div className="chat-header">
         <h3>EchoMesh</h3>
@@ -117,7 +119,7 @@ const Chat = () => {
           <span
             onClick={() => {
               navigator.clipboard.writeText(roomData.id);
-              alert("Room ID copied to clipboard!");
+              showAlert("Room ID copied to clipboard!");
             }}
             style={{ cursor: "pointer", textDecoration: "underline" }}
           >
@@ -127,7 +129,7 @@ const Chat = () => {
           <span
             onClick={() => {
               navigator.clipboard.writeText(roomData.password);
-              alert("Password copied to clipboard!");
+              showAlert("Password copied to clipboard!");
             }}
             style={{ cursor: "pointer", textDecoration: "underline" }}
           >
@@ -149,17 +151,15 @@ const Chat = () => {
           Join
         </button>
         <button
-        onClick={() => {
-          const newRoom = generateRoomId();
-          setRoomData(newRoom);
-          sessionStorage.setItem("echomesh-room", newRoom.id); // ✅ Only storing roomId
-          alert(
-            `New room created!\nRoom ID: ${newRoom.id}\nPassword: ${newRoom.password}\n\n⚠️ Please save this password! You will lose access if you refresh.`
-          );
-        }}
-      >
-        New
-      </button>
+          onClick={() => {
+            const newRoom = generateRoomId();
+            setRoomData(newRoom);
+            sessionStorage.setItem("echomesh-room", newRoom.id); // ✅ Only storing roomId
+            showAlert(`New room created!\nRoom ID: ${newRoom.id}\nPassword: ${newRoom.password}\n\n⚠️ Please save this password! You will lose access if you refresh.`);
+          }}
+        >
+          New
+        </button>
       </div>
 
       {/* 🔹 Message Display */}
