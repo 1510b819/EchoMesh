@@ -79,7 +79,9 @@ export const combineKeysForEncryption = async (
   combinedKey.set(sharedSecret, passwordDerivedKey.length);  // Copy the shared secret
 
   // Use a hash to ensure the final key has the correct size
-  return sodium.crypto_generichash(32, combinedKey); // 32-byte hash for final encryption key
+  const finalKey = sodium.crypto_generichash(32, combinedKey); // 32-byte hash for final encryption key
+  console.log("🔑 Combined encryption key:", finalKey);
+  return finalKey;
 };
 
 
@@ -96,7 +98,9 @@ export const encryptMessage = async (message: string, key: Uint8Array): Promise<
     key
   );
 
-  return `${arrayBufferToBase64(nonce)}:${arrayBufferToBase64(encrypted)}`;
+  const ciphertext = `${arrayBufferToBase64(nonce)}:${arrayBufferToBase64(encrypted)}`;
+  console.log("🔒 Encrypted message:", ciphertext);
+  return ciphertext;
 };
 
 // 📌 Decrypt a Message using XChaCha20-Poly1305
@@ -106,6 +110,10 @@ export const decryptMessage = async (ciphertext: string, key: Uint8Array): Promi
 
     const [nonceB64, encryptedB64] = ciphertext.split(":");
     if (!nonceB64 || !encryptedB64) throw new Error("❌ Invalid ciphertext format");
+
+    console.log("🔑 Decrypting with key:", key);
+    console.log("Nonce:", nonceB64);
+    console.log("Encrypted message:", encryptedB64);
 
     const nonce = base64ToArrayBuffer(nonceB64);
     const encrypted = base64ToArrayBuffer(encryptedB64);
@@ -117,7 +125,9 @@ export const decryptMessage = async (ciphertext: string, key: Uint8Array): Promi
       key
     );
 
-    return decodeText(decrypted);
+    const decryptedText = decodeText(decrypted);
+    console.log("🔓 Decrypted message:", decryptedText);
+    return decryptedText;
   } catch (error) {
     console.error("❌ Decryption failed:", error);
     return "[Decryption Error]";
