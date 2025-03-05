@@ -41,43 +41,41 @@ export const deriveKeyFromPassword = async (password: string, roomID: string): P
   );
 };
 
-// 📌 Encrypt a Message using XChaCha20-Poly1305
-export const encryptMessage = async (message: string, key: Uint8Array): Promise<string> => {
+export const encryptMessage = async (message: string, key: Uint8Array) => {
   await sodium.ready;
 
-  const nonce = sodium.randombytes_buf(sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES); // Generate a random nonce
-  const encrypted = sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(
-    encodeText(message), // Message to encrypt
-    null, // No additional authenticated data (AAD)
-    null, // No secret nonce
-    nonce,
-    key
-  );
+  const nonce = sodium.randombytes_buf(sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES);
+  const encrypted = sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(encodeText(message), null, null, nonce, key);
 
-  return `${arrayBufferToBase64(nonce)}:${arrayBufferToBase64(encrypted)}`;
+  const hmac = sodium.crypto_generichash(32, encrypted, key);
+  
+  return `${arrayBufferToBase64(nonce)}:${arrayBufferToBase64(encrypted)}:${arrayBufferToBase64(hmac)}`;
 };
 
-// 📌 Decrypt a Message using XChaCha20-Poly1305
-export const decryptMessage = async (ciphertext: string, key: Uint8Array): Promise<string> => {
+
+export const decryptMessage = async (ciphertext: string, key: Uint8Array) => {
   try {
     await sodium.ready;
 
-    const [nonceB64, encryptedB64] = ciphertext.split(":");
-    if (!nonceB64 || !encryptedB64) throw new Error("❌ Invalid ciphertext format");
+    const [nonceB64, encryptedB64, hmacB64] = ciphertext.split(":");
+    if (!nonceB64 || !encryptedB64 || !hmacB64) throw new Error("❌ Invalid ciphertext format");
 
     const nonce = base64ToArrayBuffer(nonceB64);
     const encrypted = base64ToArrayBuffer(encryptedB64);
-    const decrypted = sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(
-      null, // No additional authenticated data (AAD)
-      encrypted,
-      null, // No secret nonce
-      nonce,
-      key
-    );
+    const receivedHmac = base64ToArrayBuffer(hmacB64);
 
+    // Validate HMAC
+    const computedHmac = sodium.crypto_generichash(32, encrypted, key);
+    if (!sodium.memcmp(computedHmac, receivedHmac)) {
+      throw new Error("❌ Message integrity check failed!");
+    }
+
+    // Decrypt if HMAC is valid
+    const decrypted = sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(null, encrypted, null, nonce, key);
     return decodeText(decrypted);
   } catch (error) {
     console.error("❌ Decryption failed:", error);
     return "[Decryption Error]";
   }
 };
+
