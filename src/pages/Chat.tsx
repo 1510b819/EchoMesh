@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { combineKeysForEncryption, decryptMessage, generateDiffieHellmanKeyPair } from "../utils/cryptoUtils";
+import { combineKeysForEncryption, decryptMessage, deriveDiffieHellmanKeyPair } from "../utils/cryptoUtils";
 import { createRoom, generateRoomId } from "../utils/trysteroUtils";
 import { handleJoinRoom } from "../utils/roomUtils";
 import { handleSend } from "../utils/messageUtils";
@@ -50,7 +50,7 @@ const Chat = () => {
   
       try {
         // Generate Diffie-Hellman key pair
-        const { privateKey, publicKey } = await generateDiffieHellmanKeyPair();
+        const { privateKey, publicKey } = await deriveDiffieHellmanKeyPair(roomData.id, roomData.password);
   
         // Combine the password-based key and Diffie-Hellman shared secret
         const combinedKey = await combineKeysForEncryption(roomData.password, roomData.id, privateKey, publicKey);
@@ -62,7 +62,7 @@ const Chat = () => {
   
     deriveKey();
   }, [roomData.password, roomData.id]);
-  
+
   useEffect(() => {
     const cleanupMessages = () => {
       setMessages((prev) =>
@@ -100,7 +100,6 @@ const Chat = () => {
     inputRef.current?.focus();
   }, []);
 
-  // Lazy Loading Implementation
   const handleScroll = () => {
     if (!messagesContainerRef.current) return;
 

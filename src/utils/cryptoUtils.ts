@@ -41,14 +41,23 @@ export const deriveKeyFromPassword = async (password: string, roomID: string): P
   );
 };
 
-// 📌 Generate Diffie-Hellman Key Pair
-export const generateDiffieHellmanKeyPair = async (): Promise<{
+// 📌 Derive Diffie-Hellman Key Pair from Room ID and Password
+export const deriveDiffieHellmanKeyPair = async (roomID: string, password: string): Promise<{
   privateKey: Uint8Array;
   publicKey: Uint8Array;
 }> => {
   await sodium.ready;
-  const keyPair = sodium.crypto_box_keypair(); // Generates a public/private key pair
-  return { privateKey: keyPair.privateKey, publicKey: keyPair.publicKey };
+
+  // Combine room ID and password into one string and hash it for determinism
+  const keySeed = sodium.crypto_generichash(32, sodium.from_string(roomID + password));
+
+  // Use the hashed result to generate a Diffie-Hellman private key
+  const privateKey = keySeed;  // We use the hash as the private key directly
+
+  // Generate the public key using crypto_scalarmult_base (base point multiplication)
+  const publicKey = sodium.crypto_scalarmult_base(privateKey);
+
+  return { privateKey, publicKey };
 };
 
 // 📌 Derive Shared Secret using Diffie-Hellman
@@ -83,7 +92,6 @@ export const combineKeysForEncryption = async (
   console.log("🔑 Combined encryption key:", finalKey);
   return finalKey;
 };
-
 
 // 📌 Encrypt a Message using XChaCha20-Poly1305
 export const encryptMessage = async (message: string, key: Uint8Array): Promise<string> => {
