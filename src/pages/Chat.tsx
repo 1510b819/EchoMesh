@@ -19,11 +19,7 @@ const MESSAGE_LIFETIME = 60 * 60 * 1000; // 1 hour
 const MESSAGE_COOLDOWN = 1000; // 1-second cooldown
 
 const Chat = () => {
-  const [roomData, setRoomData] = useState(() => {
-    const storedRoom = sessionStorage.getItem("echomesh-room");
-    return storedRoom ? { id: storedRoom, password: "" } : generateRoomId(); // Don't load password from storage initially
-  });
-
+  const [roomData, setRoomData] = useState(() => generateRoomId()); // No longer from sessionStorage
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState("");
   const [customRoom, setCustomRoom] = useState("");
@@ -109,7 +105,6 @@ const Chat = () => {
   const handlePasswordSubmit = (password: string) => {
     handleJoinRoom(currentRoomId, setRoomData, setMessages, setCustomRoom);  // Do not pass the password here anymore
     setRoomData((prev) => ({ ...prev, password }));  // Set password in state directly
-    sessionStorage.setItem("echomesh-room-password", password); // Store password in session storage
     setPasswordModalOpen(false); // Close the modal after submitting
   };
 
@@ -169,7 +164,6 @@ const Chat = () => {
           onClick={() => {
             const newRoom = generateRoomId();
             setRoomData(newRoom);
-            sessionStorage.setItem("echomesh-room", newRoom.id); // ✅ Only storing roomId
             showAlert(`New room created!\nRoom ID: ${newRoom.id}\nPassword: ${newRoom.password}\n`);
           }}
         >
