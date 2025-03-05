@@ -17,6 +17,7 @@ type Message = {
 
 const MESSAGE_LIFETIME = 60 * 60 * 1000; // 1 hour 
 const MESSAGE_COOLDOWN = 1000; // 1-second cooldown
+const MAX_MESSAGE_LENGTH = 500; // Maximum message length (can be adjusted)
 
 const Chat = () => {
   const [roomData, setRoomData] = useState(() => generateRoomId()); // No longer from sessionStorage
@@ -31,6 +32,7 @@ const Chat = () => {
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
 
   const { sendMessage, getMessage } = createRoom(roomData.id);
 
@@ -94,6 +96,31 @@ const Chat = () => {
     inputRef.current?.focus();
   }, []);
 
+  // Lazy Loading Implementation
+  const handleScroll = () => {
+    if (!messagesContainerRef.current) return;
+
+    const bottom = messagesContainerRef.current.scrollHeight === messagesContainerRef.current.scrollTop + messagesContainerRef.current.clientHeight;
+    if (!bottom) {
+      // If not scrolled to the bottom, don't load more messages
+      return;
+    }
+
+    // Scroll is at the bottom, load more messages
+    loadMoreMessages();
+  };
+
+  const loadMoreMessages = () => {
+    // Here you would fetch older messages from your storage (or other source)
+    // For now, we will simulate this by adding older messages to the state
+    const olderMessages: Message[] = [
+      { text: "Older message 1", sender: "Peer", timestamp: Date.now() - 1000000 },
+      { text: "Older message 2", sender: "Peer", timestamp: Date.now() - 10000000 },
+    ];
+
+    setMessages((prev) => [...olderMessages, ...prev]);
+  };
+
   const handleRoomJoin = useCallback(
     (room: string) => {
       setCurrentRoomId(room);
@@ -115,6 +142,17 @@ const Chat = () => {
   const showAlert = (message: string) => {
     setAlertMessage(message);
     setTimeout(() => setAlertMessage(null), 3000); // Hide alert after 3 seconds
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const sanitizedInput = DOMPurify.sanitize(e.target.value);
+
+    // Validate message length
+    if (sanitizedInput.length <= MAX_MESSAGE_LENGTH) {
+      setMessage(sanitizedInput);
+    } else {
+      showAlert(`Message cannot exceed ${MAX_MESSAGE_LENGTH} characters.`);
+    }
   };
 
   return (
@@ -172,7 +210,11 @@ const Chat = () => {
       </div>
 
       {/* 🔹 Message Display */}
-      <div className="message-display">
+      <div
+        className="message-display"
+        ref={messagesContainerRef}
+        onScroll={handleScroll}
+      >
         {messages.map((msg, index) => (
           <div key={index} className={`message ${msg.sender === "Me" ? "me" : ""}`}>
             <p>
@@ -190,7 +232,7 @@ const Chat = () => {
           ref={inputRef}
           type="text"
           value={message}
-          onChange={(e) => setMessage(DOMPurify.sanitize(e.target.value))}
+          onChange={handleInputChange}
           placeholder="> Type a message..."
           onKeyDown={(e) =>
             e.key === "Enter" &&
