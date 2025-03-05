@@ -170,7 +170,7 @@ const Chat = () => {
             const newRoom = generateRoomId();
             setRoomData(newRoom);
             sessionStorage.setItem("echomesh-room", newRoom.id); // ✅ Only storing roomId
-            showAlert(`New room created!\nRoom ID: ${newRoom.id}\nPassword: ${newRoom.password}\n\n⚠️ Please save this password! You will lose access if you refresh.`);
+            showAlert(`New room created!\nRoom ID: ${newRoom.id}\nPassword: ${newRoom.password}\n`);
           }}
         >
           New
