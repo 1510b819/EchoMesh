@@ -23,7 +23,7 @@ const Chat = () => {
     const storedRoom = sessionStorage.getItem("echomesh-room");
     return storedRoom ? { id: storedRoom, password: "" } : generateRoomId(); // Don't load password from storage initially
   });
-  
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState("");
   const [customRoom, setCustomRoom] = useState("");
@@ -112,7 +112,6 @@ const Chat = () => {
     sessionStorage.setItem("echomesh-room-password", password); // Store password in session storage
     setPasswordModalOpen(false); // Close the modal after submitting
   };
-  
 
   const handleCloseModal = () => {
     setPasswordModalOpen(false);
