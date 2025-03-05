@@ -1,11 +1,11 @@
-// Chat.tsx
 import { useState, useEffect, useRef, useCallback } from "react";
 import { deriveKeyFromPassword, decryptMessage } from "../utils/cryptoUtils";
 import { createRoom, generateRoomId } from "../utils/trysteroUtils";
 import { handleJoinRoom } from "../utils/roomUtils";
 import { handleSend } from "../utils/messageUtils";
 import DOMPurify from "dompurify";
-import Alert from "../components/Alert"; // Import the Alert component
+import Alert from "../components/Alert/Alert"; // Import the Alert component
+import PasswordModal from "../components/PasswordModal/PasswordModal"; // Import the PasswordModal component
 
 import "./Chat.css";
 
@@ -19,10 +19,9 @@ const MESSAGE_LIFETIME = 60 * 60 * 1000; // 1 hour
 const MESSAGE_COOLDOWN = 1000; // 1-second cooldown
 
 const Chat = () => {
-  // 🔹 Load stored session data or generate a new room
   const [roomData, setRoomData] = useState(() => {
-    const storedRoom = sessionStorage.getItem("echomesh-room"); // Keep roomId stored
-    return storedRoom ? { id: storedRoom, password: "" } : generateRoomId(); // Don't load password from storage
+    const storedRoom = sessionStorage.getItem("echomesh-room");
+    return storedRoom ? { id: storedRoom, password: "" } : generateRoomId(); // Don't load password from storage initially
   });
   
   const [messages, setMessages] = useState<Message[]>([]);
@@ -31,6 +30,8 @@ const Chat = () => {
   const [encryptionKey, setEncryptionKey] = useState<Uint8Array | null>(null);
   const [lastMessageTime, setLastMessageTime] = useState(0);
   const [alertMessage, setAlertMessage] = useState<string | null>(null); // State for alert message
+  const [isPasswordModalOpen, setPasswordModalOpen] = useState(false);
+  const [currentRoomId, setCurrentRoomId] = useState<string>("");
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -98,9 +99,24 @@ const Chat = () => {
   }, []);
 
   const handleRoomJoin = useCallback(
-    (room: string) => handleJoinRoom(room, setRoomData, setMessages, setCustomRoom),
+    (room: string) => {
+      setCurrentRoomId(room);
+      setPasswordModalOpen(true); // Open password modal
+    },
     []
   );
+
+  const handlePasswordSubmit = (password: string) => {
+    handleJoinRoom(currentRoomId, setRoomData, setMessages, setCustomRoom);  // Do not pass the password here anymore
+    setRoomData((prev) => ({ ...prev, password }));  // Set password in state directly
+    sessionStorage.setItem("echomesh-room-password", password); // Store password in session storage
+    setPasswordModalOpen(false); // Close the modal after submitting
+  };
+  
+
+  const handleCloseModal = () => {
+    setPasswordModalOpen(false);
+  };
 
   const showAlert = (message: string) => {
     setAlertMessage(message);
@@ -218,6 +234,14 @@ const Chat = () => {
           Send
         </button>
       </div>
+
+      {/* Password Modal */}
+      <PasswordModal
+        isOpen={isPasswordModalOpen}
+        roomId={currentRoomId}
+        onClose={handleCloseModal}
+        onSubmit={handlePasswordSubmit}
+      />
     </div>
   );
 };
