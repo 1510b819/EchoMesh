@@ -1,6 +1,7 @@
 import { encryptMessage } from "./cryptoUtils";
 import { handleCommand } from "./commands";
 
+// 
 type SendMessageFunction = (msg: string) => void;
 type SetMessagesFunction = React.Dispatch<
   React.SetStateAction<{ text: string; sender: string; timestamp: number }[]>

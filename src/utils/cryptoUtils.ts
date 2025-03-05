@@ -10,7 +10,7 @@ const initSodium = async () => {
   }
 };
 
-initSodium(); // 🚀 Load sodium at startup
+initSodium(); // Load sodium at startup
 
 // 📌 Encode & Decode Text
 export const encodeText = (text: string): Uint8Array => new TextEncoder().encode(text);

@@ -15,7 +15,7 @@ type Message = {
   timestamp: number;
 };
 
-const MESSAGE_LIFETIME = 60 * 60 * 1000; // 1 hour
+const MESSAGE_LIFETIME = 60 * 60 * 1000; // 1 hour 
 const MESSAGE_COOLDOWN = 1000; // 1-second cooldown
 
 const Chat = () => {
