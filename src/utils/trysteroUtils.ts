@@ -16,16 +16,12 @@ export const generateRoomId = () => {
     .join("")
     .slice(0, 12);
 
-  // Generate a more secure password (16 chars, using A-Z, a-z, 0-9, symbols)
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+";
   const passwordBytes = crypto.getRandomValues(new Uint8Array(16));
   const password = Array.from(passwordBytes)
     .map((byte) => chars[byte % chars.length]) // Ensure valid character selection
     .join("");
 
-  const newRoom = { id: `room-${randomId}`, password };
-
-  sessionStorage.setItem("echomesh-room-password", password); // Store password for creator
-
-  return newRoom;
+  return { id: `room-${randomId}`, password }; // ✅ Keep password in memory, don't store
 };
+

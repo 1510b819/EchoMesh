@@ -20,12 +20,10 @@ const MESSAGE_COOLDOWN = 1000; // 1-second cooldown
 const Chat = () => {
   // 🔹 Load stored session data or generate a new room
   const [roomData, setRoomData] = useState(() => {
-    const storedRoom = sessionStorage.getItem("echomesh-room");
-    const storedPassword = sessionStorage.getItem("echomesh-room-password");
-    return storedRoom
-      ? { id: storedRoom, password: storedPassword || "" }
-      : generateRoomId();
+    const storedRoom = sessionStorage.getItem("echomesh-room"); // Keep roomId stored
+    return storedRoom ? { id: storedRoom, password: "" } : generateRoomId(); // Don't load password from storage
   });
+  
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState("");
@@ -151,16 +149,17 @@ const Chat = () => {
           Join
         </button>
         <button
-          onClick={() => {
-            const newRoom = generateRoomId();
-            setRoomData(newRoom);
-            sessionStorage.setItem("echomesh-room", newRoom.id);
-            sessionStorage.setItem("echomesh-room-password", newRoom.password);
-            alert(`New room created!\nRoom ID: ${newRoom.id}\nPassword: ${newRoom.password}`);
-          }}
-        >
-          New
-        </button>
+        onClick={() => {
+          const newRoom = generateRoomId();
+          setRoomData(newRoom);
+          sessionStorage.setItem("echomesh-room", newRoom.id); // ✅ Only storing roomId
+          alert(
+            `New room created!\nRoom ID: ${newRoom.id}\nPassword: ${newRoom.password}\n\n⚠️ Please save this password! You will lose access if you refresh.`
+          );
+        }}
+      >
+        New
+      </button>
       </div>
 
       {/* 🔹 Message Display */}
@@ -169,7 +168,7 @@ const Chat = () => {
           <div key={index} className={`message ${msg.sender === "Me" ? "me" : ""}`}>
             <p>
               <strong>{msg.sender}:</strong>{" "}
-              <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.text) }}></span>
+              <span>{DOMPurify.sanitize(msg.text)}</span>
             </p>
           </div>
         ))}
