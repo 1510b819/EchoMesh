@@ -23,7 +23,7 @@ export const arrayBufferToBase64 = (buffer: Uint8Array): string =>
 export const base64ToArrayBuffer = (base64: string): Uint8Array =>
   sodium.from_base64(base64, sodium.base64_variants.ORIGINAL);
 
-// 📌 Derive Secure Key from Password & Room ID
+// 📌 Derive Secure Key from Password & Room ID (For Diffie-Hellman Key Exchange)
 export const deriveKeyFromPassword = async (password: string, roomID: string): Promise<Uint8Array> => {
   await sodium.ready;
 
@@ -40,6 +40,48 @@ export const deriveKeyFromPassword = async (password: string, roomID: string): P
     sodium.crypto_pwhash_ALG_DEFAULT
   );
 };
+
+// 📌 Generate Diffie-Hellman Key Pair
+export const generateDiffieHellmanKeyPair = async (): Promise<{
+  privateKey: Uint8Array;
+  publicKey: Uint8Array;
+}> => {
+  await sodium.ready;
+  const keyPair = sodium.crypto_box_keypair(); // Generates a public/private key pair
+  return { privateKey: keyPair.privateKey, publicKey: keyPair.publicKey };
+};
+
+// 📌 Derive Shared Secret using Diffie-Hellman
+export const deriveSharedSecret = async (
+  privateKey: Uint8Array,
+  publicKey: Uint8Array
+): Promise<Uint8Array> => {
+  await sodium.ready;
+  const sharedSecret = sodium.crypto_scalarmult(privateKey, publicKey); // Derive shared secret using Diffie-Hellman
+  return sharedSecret;
+};
+
+// 📌 Combine Diffie-Hellman Shared Secret and Password-Based Key
+export const combineKeysForEncryption = async (
+  password: string,
+  roomID: string,
+  privateKey: Uint8Array,
+  publicKey: Uint8Array
+): Promise<Uint8Array> => {
+  const passwordDerivedKey = await deriveKeyFromPassword(password, roomID); // Derive key from password
+  const sharedSecret = await deriveSharedSecret(privateKey, publicKey); // Derive shared secret
+
+  // Manually combine the password-derived key and the Diffie-Hellman shared secret
+  const combinedKey = new Uint8Array(passwordDerivedKey.length + sharedSecret.length);
+  
+  // Copy both arrays into the combined array
+  combinedKey.set(passwordDerivedKey, 0);  // Copy the password-derived key
+  combinedKey.set(sharedSecret, passwordDerivedKey.length);  // Copy the shared secret
+
+  // Use a hash to ensure the final key has the correct size
+  return sodium.crypto_generichash(32, combinedKey); // 32-byte hash for final encryption key
+};
+
 
 // 📌 Encrypt a Message using XChaCha20-Poly1305
 export const encryptMessage = async (message: string, key: Uint8Array): Promise<string> => {

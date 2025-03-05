@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { deriveKeyFromPassword, decryptMessage } from "../utils/cryptoUtils";
+import { combineKeysForEncryption, decryptMessage, generateDiffieHellmanKeyPair } from "../utils/cryptoUtils";
 import { createRoom, generateRoomId } from "../utils/trysteroUtils";
 import { handleJoinRoom } from "../utils/roomUtils";
 import { handleSend } from "../utils/messageUtils";
@@ -47,18 +47,22 @@ const Chat = () => {
         setEncryptionKey(null);
         return;
       }
-
+  
       try {
-        const key = await deriveKeyFromPassword(roomData.password, roomData.id);
-        setEncryptionKey(key);
+        // Generate Diffie-Hellman key pair
+        const { privateKey, publicKey } = await generateDiffieHellmanKeyPair();
+  
+        // Combine the password-based key and Diffie-Hellman shared secret
+        const combinedKey = await combineKeysForEncryption(roomData.password, roomData.id, privateKey, publicKey);
+        setEncryptionKey(combinedKey);
       } catch (error) {
         console.error("Key derivation failed:", error);
       }
     };
-
+  
     deriveKey();
   }, [roomData.password, roomData.id]);
-
+  
   useEffect(() => {
     const cleanupMessages = () => {
       setMessages((prev) =>
