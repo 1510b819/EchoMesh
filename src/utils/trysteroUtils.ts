@@ -2,26 +2,33 @@ import { joinRoom } from "trystero/torrent";
 
 const config = { appId: "echomesh" };
 
+/**
+ * Create a secure chat room using Trystero
+ */
 export const createRoom = (roomId: string) => {
   const room = joinRoom(config, roomId);
   const [sendMessage, getMessage] = room.makeAction<string>("message");
   return { sendMessage, getMessage };
 };
 
-
+/**
+ * Generate a cryptographically secure room ID and password
+ */
 export const generateRoomId = () => {
-  const randomBytes = crypto.getRandomValues(new Uint8Array(6));
-  const randomId = Array.from(randomBytes)
-    .map((byte) => byte.toString(36).padStart(2, "0"))
-    .join("")
-    .slice(0, 12);
+  const generateSecureString = (length: number, chars: string) => {
+    const bytes = crypto.getRandomValues(new Uint8Array(length));
+    return Array.from(bytes)
+      .map((byte) => chars[byte % chars.length])
+      .join("");
+  };
 
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+";
-  const passwordBytes = crypto.getRandomValues(new Uint8Array(16));
-  const password = Array.from(passwordBytes)
-    .map((byte) => chars[byte % chars.length]) // Ensure valid character selection
-    .join("");
+  // Generate a **stronger** room ID (20 lowercase alphanumeric characters)
+  const roomId = generateSecureString(20, "abcdefghijklmnopqrstuvwxyz0123456789");
 
-  return { id: `room-${randomId}`, password }; // ✅ Keep password in memory, don't store
+  // Generate a **strong password** (32 characters, includes symbols)
+  const chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+";
+  const password = generateSecureString(32, chars);
+
+  return { id: `room-${roomId}`, password };
 };
-

@@ -1,23 +1,34 @@
+/**
+ * Validate if a room ID is properly formatted
+ * Now enforces 20-character room IDs for stronger security
+ */
 export const isValidRoomId = (roomId: string) => {
-  return /^room-[a-z0-9]{12}$/.test(roomId); // Matches "room-xxxxxxxxxxxx" (12 lowercase alphanumeric chars)
+  return /^room-[a-z0-9]{20}$/.test(roomId); // ✅ Updated to match the new stronger 20-char room ID format
 };
-//join room
+
+/**
+ * Handles the process of joining a room securely
+ */
 export const handleJoinRoom = (
   newRoomId: string,
   setRoomData: (room: { id: string; password: string }) => void,
   setMessages: (messages: []) => void,
   setCustomRoom: (room: string) => void
 ) => {
-  if (!newRoomId.trim()) return;
+  if (!newRoomId.trim()) {
+    console.warn("Attempted to join an empty room ID.");
+    return;
+  }
 
   if (!isValidRoomId(newRoomId)) {
     console.warn("Invalid Room ID! Only secure room IDs are allowed.");
     return;
   }
 
-  // Proceed to show the password modal (don't ask for password here)
-  setRoomData({ id: newRoomId, password: "" });  // Reset password in state
-  setMessages([]); // Clear messages when switching rooms
-  setCustomRoom("");
-};
+  // Ensure the state is cleared before joining a new room
+  setRoomData({ id: newRoomId, password: "" }); // ✅ Password remains unset until verified
+  setMessages([]); // ✅ Clear previous messages to prevent data leakage
+  setCustomRoom(""); // ✅ Reset any previous custom room selection
 
+  console.log(`Joining room: ${newRoomId}`);
+};
