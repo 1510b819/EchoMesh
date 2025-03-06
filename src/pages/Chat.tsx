@@ -34,6 +34,10 @@ const Chat = () => {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
 
+  const [lastNonce, setLastNonce] = useState<number>(0);
+  const [seenNonces] = useState<Set<string>>(new Set());
+
+
   const { sendMessage, getMessage } = createRoom(roomData.id);
 
   const setRoomId = (newRoomId: string) => {
@@ -79,7 +83,7 @@ const Chat = () => {
 
     const messageHandler = async (encryptedMsg: string, peerId: string) => {
       try {
-        const decryptedMsg = await decryptMessage(encryptedMsg, encryptionKey);
+        const decryptedMsg = await decryptMessage(encryptedMsg, encryptionKey, seenNonces);
         setMessages((prev) => [
           ...prev,
           { text: DOMPurify.sanitize(decryptedMsg), sender: peerId, timestamp: Date.now() },
@@ -243,6 +247,8 @@ const Chat = () => {
               DOMPurify.sanitize(message),
               roomData.id,
               encryptionKey,
+              lastNonce,
+              setLastNonce,
               sendMessage,
               setRoomId,
               setMessages,
@@ -259,6 +265,8 @@ const Chat = () => {
               DOMPurify.sanitize(message),
               roomData.id,
               encryptionKey,
+              lastNonce,
+              setLastNonce,
               sendMessage,
               setRoomId,
               setMessages,

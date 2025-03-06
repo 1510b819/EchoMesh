@@ -9,11 +9,12 @@ type SetMessagesFunction = React.Dispatch<
 type SetMessageFunction = React.Dispatch<React.SetStateAction<string>>;
 type SetLastMessageTimeFunction = React.Dispatch<React.SetStateAction<number>>;
 
-// Handle the send prompts
 export const handleSend = async (
   message: string,
   roomId: string,
-  encryptionKey: Uint8Array | null, // 🔑 Update type to Uint8Array
+  encryptionKey: Uint8Array | null,
+  lastNonce: number, // Pass lastNonce
+  setLastNonce: React.Dispatch<React.SetStateAction<number>>, // Add setter for lastNonce
   sendMessage: SendMessageFunction,
   setRoomId: (roomId: string) => void,
   setMessages: SetMessagesFunction,
@@ -24,7 +25,7 @@ export const handleSend = async (
 ) => {
   const now = Date.now();
 
-  if (!message.trim() || !encryptionKey) return; // Check for message and encryptionKey validity
+  if (!message.trim() || !encryptionKey) return;
 
   if (now - lastMessageTime < messageCooldown) {
     console.warn("You're sending messages too fast! Slow down.");
@@ -33,7 +34,6 @@ export const handleSend = async (
 
   setLastMessageTime(now);
 
-  // Handle command messages like /joinroom, /status, etc.
   if (message.startsWith("/")) {
     handleCommand({ message, roomId, setRoomId, setMessages, setMessage });
     setMessage("");
@@ -41,14 +41,19 @@ export const handleSend = async (
   }
 
   try {
-    // Encrypt the message with libsodium
-    const encryptedMsg = await encryptMessage(message, encryptionKey);
-    sendMessage(encryptedMsg); // Send the encrypted message
+    // Encrypt the message with the lastNonce
+    const encryptedMsg = await encryptMessage(message, encryptionKey, lastNonce);
+
+    sendMessage(encryptedMsg);
+
+    // Update lastNonce (increment or get from encryption)
+    setLastNonce(lastNonce + 1);
+
     setMessages((prev) => [
       ...prev,
       { text: message, sender: "Me", timestamp: Date.now() }
     ]);
-    setMessage(""); // Clear the input field
+    setMessage("");
   } catch (error) {
     console.error("Message encryption failed:", error);
     setMessages((prev) => [

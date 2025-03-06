@@ -93,51 +93,56 @@ export const combineKeysForEncryption = async (
   return finalKey;
 };
 
-// 📌 Encrypt a Message using XChaCha20-Poly1305
-export const encryptMessage = async (message: string, key: Uint8Array): Promise<string> => {
+export const encryptMessage = async (message: string, key: Uint8Array, lastNonce: number): Promise<string> => {
   await sodium.ready;
 
-  const nonce = sodium.randombytes_buf(sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES); // Generate a random nonce
+  const nonce = new TextEncoder().encode(String(Date.now())); // Monotonic nonce (timestamp)
+  if (parseInt(new TextDecoder().decode(nonce)) <= lastNonce) {
+    throw new Error("Replay attack detected! Nonce must increase.");
+  }
+
   const encrypted = sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(
     encodeText(message), // Message to encrypt
-    null, // No additional authenticated data (AAD)
+    nonce, // Nonce as AAD (Additional Authenticated Data)
     null, // No secret nonce
+    nonce, // Use the nonce
+    key
+  );
+
+  // Compute HMAC for integrity check
+  const hmac = sodium.crypto_generichash(32, encrypted, key);
+
+  return `${arrayBufferToBase64(nonce)}:${arrayBufferToBase64(encrypted)}:${arrayBufferToBase64(hmac)}`;
+};
+
+export const decryptMessage = async (ciphertext: string, key: Uint8Array, seenNonces: Set<string>): Promise<string> => {
+  await sodium.ready;
+
+  const [nonceB64, encryptedB64, hmacB64] = ciphertext.split(":");
+  if (!nonceB64 || !encryptedB64 || !hmacB64) throw new Error("Invalid ciphertext format");
+
+  const nonce = base64ToArrayBuffer(nonceB64);
+  const encrypted = base64ToArrayBuffer(encryptedB64);
+  const receivedHmac = base64ToArrayBuffer(hmacB64);
+
+  // Prevent replay attacks
+  const nonceStr = new TextDecoder().decode(nonce);
+  if (seenNonces.has(nonceStr)) throw new Error("Replay attack detected!");
+  seenNonces.add(nonceStr);
+
+  // Validate HMAC
+  const computedHmac = sodium.crypto_generichash(32, encrypted, key);
+  if (!sodium.memcmp(receivedHmac, computedHmac)) {
+    throw new Error("Message authentication failed!");
+  }
+
+  const decrypted = sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(
+    nonce,
+    encrypted,
+    null,
     nonce,
     key
   );
 
-  const ciphertext = `${arrayBufferToBase64(nonce)}:${arrayBufferToBase64(encrypted)}`;
-  console.log("🔒 Encrypted message:", ciphertext);
-  return ciphertext;
-};
-
-// 📌 Decrypt a Message using XChaCha20-Poly1305
-export const decryptMessage = async (ciphertext: string, key: Uint8Array): Promise<string> => {
-  try {
-    await sodium.ready;
-
-    const [nonceB64, encryptedB64] = ciphertext.split(":");
-    if (!nonceB64 || !encryptedB64) throw new Error("❌ Invalid ciphertext format");
-
-    console.log("🔑 Decrypting with key:", key);
-    console.log("Nonce:", nonceB64);
-    console.log("Encrypted message:", encryptedB64);
-
-    const nonce = base64ToArrayBuffer(nonceB64);
-    const encrypted = base64ToArrayBuffer(encryptedB64);
-    const decrypted = sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(
-      null, // No additional authenticated data (AAD)
-      encrypted,
-      null, // No secret nonce
-      nonce,
-      key
-    );
-
-    const decryptedText = decodeText(decrypted);
-    console.log("🔓 Decrypted message:", decryptedText);
-    return decryptedText;
-  } catch (error) {
-    console.error("❌ Decryption failed:", error);
-    return "[Decryption Error]";
-  }
+  return decodeText(decrypted);
 };
