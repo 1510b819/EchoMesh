@@ -1,12 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { combineKeysForEncryption, decryptMessage, deriveDiffieHellmanKeyPair } from "../utils/cryptoUtils";
+import {
+  combineKeysForEncryption,
+  decryptMessage,
+  deriveDiffieHellmanKeyPair,
+} from "../utils/cryptoUtils";
 import { createRoom, generateRoomId } from "../utils/trysteroUtils";
 import { handleJoinRoom } from "../utils/roomUtils";
 import { handleSend } from "../utils/messageUtils";
 import DOMPurify from "dompurify";
-import Alert from "../components/Alert/Alert"; // Import the Alert component
-import PasswordModal from "../components/PasswordModal/PasswordModal"; // Import the PasswordModal component
-
+import Alert from "../components/Alert/Alert";
+import PasswordModal from "../components/PasswordModal/PasswordModal";
 import "./Chat.css";
 
 type Message = {
@@ -15,34 +18,32 @@ type Message = {
   timestamp: number;
 };
 
-const MESSAGE_LIFETIME = 60 * 60 * 1000; // 1 hour 
+const MESSAGE_LIFETIME = 60 * 60 * 1000; // 1 hour
 const MESSAGE_COOLDOWN = 1000; // 1-second cooldown
-const MAX_MESSAGE_LENGTH = 500; // Maximum message length (can be adjusted)
+const MAX_MESSAGE_LENGTH = 500;
 
 const Chat = () => {
-  const [roomData, setRoomData] = useState(() => generateRoomId()); // No longer from sessionStorage
+  const [roomData, setRoomData] = useState(() => generateRoomId());
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState("");
   const [customRoom, setCustomRoom] = useState("");
   const [encryptionKey, setEncryptionKey] = useState<Uint8Array | null>(null);
   const [lastMessageTime, setLastMessageTime] = useState(0);
-  const [alertMessage, setAlertMessage] = useState<string | null>(null); // State for alert message
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
   const [isPasswordModalOpen, setPasswordModalOpen] = useState(false);
-  const [currentRoomId, setCurrentRoomId] = useState<string>("");
+  const [currentRoomId, setCurrentRoomId] = useState("");
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
-
   const [lastNonce, setLastNonce] = useState<number>(0);
-  const [seenNonces] = useState<Set<string>>(new Set());
-
+  const seenNonces = useRef<Set<string>>(new Set());
 
   const { sendMessage, getMessage } = createRoom(roomData.id);
 
-  const setRoomId = (newRoomId: string) => {
+  const setRoomId = useCallback((newRoomId: string) => {
     setRoomData((prev) => ({ ...prev, id: newRoomId }));
-  };
+  }, []);
 
   useEffect(() => {
     const deriveKey = async () => {
@@ -51,30 +52,33 @@ const Chat = () => {
         setEncryptionKey(null);
         return;
       }
-  
+
       try {
-        // Generate Diffie-Hellman key pair
-        const { privateKey, publicKey } = await deriveDiffieHellmanKeyPair(roomData.id, roomData.password);
-  
-        // Combine the password-based key and Diffie-Hellman shared secret
-        const combinedKey = await combineKeysForEncryption(roomData.password, roomData.id, privateKey, publicKey);
+        const { privateKey, publicKey } = await deriveDiffieHellmanKeyPair(
+          roomData.id,
+          roomData.password
+        );
+
+        const combinedKey = await combineKeysForEncryption(
+          roomData.password,
+          roomData.id,
+          privateKey,
+          publicKey
+        );
         setEncryptionKey(combinedKey);
       } catch (error) {
         console.error("Key derivation failed:", error);
       }
     };
-  
+
     deriveKey();
   }, [roomData.password, roomData.id]);
 
   useEffect(() => {
-    const cleanupMessages = () => {
-      setMessages((prev) =>
-        prev.filter((msg) => Date.now() - msg.timestamp < MESSAGE_LIFETIME)
-      );
-    };
+    const cleanupInterval = setInterval(() => {
+      setMessages((prev) => prev.filter((msg) => Date.now() - msg.timestamp < MESSAGE_LIFETIME));
+    }, 60000);
 
-    const cleanupInterval = setInterval(cleanupMessages, 60000);
     return () => clearInterval(cleanupInterval);
   }, []);
 
@@ -83,7 +87,7 @@ const Chat = () => {
 
     const messageHandler = async (encryptedMsg: string, peerId: string) => {
       try {
-        const decryptedMsg = await decryptMessage(encryptedMsg, encryptionKey, seenNonces);
+        const decryptedMsg = await decryptMessage(encryptedMsg, encryptionKey, seenNonces.current);
         setMessages((prev) => [
           ...prev,
           { text: DOMPurify.sanitize(decryptedMsg), sender: peerId, timestamp: Date.now() },
@@ -107,61 +111,51 @@ const Chat = () => {
   const handleScroll = () => {
     if (!messagesContainerRef.current) return;
 
-    const bottom = messagesContainerRef.current.scrollHeight === messagesContainerRef.current.scrollTop + messagesContainerRef.current.clientHeight;
-    if (!bottom) {
-      // If not scrolled to the bottom, don't load more messages
-      return;
+    const { scrollHeight, scrollTop, clientHeight } = messagesContainerRef.current;
+    if (scrollHeight === scrollTop + clientHeight) {
+      loadMoreMessages();
     }
-
-    // Scroll is at the bottom, load more messages
-    loadMoreMessages();
   };
 
-  const loadMoreMessages = () => {
-    // Here you would fetch older messages from your storage (or other source)
-    // For now, we will simulate this by adding older messages to the state
+  const loadMoreMessages = useCallback(() => {
     const olderMessages: Message[] = [
       { text: "Older message 1", sender: "Peer", timestamp: Date.now() - 1000000 },
       { text: "Older message 2", sender: "Peer", timestamp: Date.now() - 10000000 },
     ];
 
     setMessages((prev) => [...olderMessages, ...prev]);
-  };
+  }, []);
 
-  const handleRoomJoin = useCallback(
-    (room: string) => {
-      setCurrentRoomId(room);
-      setPasswordModalOpen(true); // Open password modal
+  const handleRoomJoin = useCallback((room: string) => {
+    setCurrentRoomId(room);
+    setPasswordModalOpen(true);
+  }, []);
+
+  const handlePasswordSubmit = useCallback(
+    (password: string) => {
+      handleJoinRoom(currentRoomId, setRoomData, setMessages, setCustomRoom);
+      setRoomData((prev) => ({ ...prev, password }));
+      setPasswordModalOpen(false);
     },
-    []
+    [currentRoomId]
   );
 
-  const handlePasswordSubmit = (password: string) => {
-    handleJoinRoom(currentRoomId, setRoomData, setMessages, setCustomRoom);  // Do not pass the password here anymore
-    setRoomData((prev) => ({ ...prev, password }));  // Set password in state directly
-    setPasswordModalOpen(false); // Close the modal after submitting
-  };
+  const handleCloseModal = () => setPasswordModalOpen(false);
 
-  const handleCloseModal = () => {
-    setPasswordModalOpen(false);
-  };
-
-  const showAlert = (message: string) => {
+  const showAlert = useCallback((message: string) => {
     setAlertMessage(message);
-    setTimeout(() => setAlertMessage(null), 3000); // Hide alert after 3 seconds
-  };
+    setTimeout(() => setAlertMessage(null), 3000);
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const sanitizedInput = DOMPurify.sanitize(e.target.value);
-
-    // Validate message length
     if (sanitizedInput.length <= MAX_MESSAGE_LENGTH) {
       setMessage(sanitizedInput);
     } else {
       showAlert(`Message cannot exceed ${MAX_MESSAGE_LENGTH} characters.`);
     }
   };
-
+  
   return (
     <div className="chat-container">
       {/* Display the alert component */}
