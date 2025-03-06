@@ -42,7 +42,7 @@ export const handleSend = async (
 
   try {
     // Encrypt the message with the lastNonce
-    const encryptedMsg = await encryptMessage(message, encryptionKey, lastNonce);
+    const encryptedMsg = await encryptMessage(message, encryptionKey);
 
     sendMessage(encryptedMsg);
 

@@ -93,19 +93,23 @@ export const combineKeysForEncryption = async (
   return finalKey;
 };
 
-export const encryptMessage = async (message: string, key: Uint8Array, lastNonce: number): Promise<string> => {
+const generateNonce = (): Uint8Array => {
+  const nonce = new Uint8Array(24);
+  crypto.getRandomValues(nonce); // ✅ Generates a proper 24-byte nonce
+  return nonce;
+};
+
+
+export const encryptMessage = async (message: string, key: Uint8Array): Promise<string> => {
   await sodium.ready;
 
-  const nonce = new TextEncoder().encode(String(Date.now())); // Monotonic nonce (timestamp)
-  if (parseInt(new TextDecoder().decode(nonce)) <= lastNonce) {
-    throw new Error("Replay attack detected! Nonce must increase.");
-  }
+  const nonce = generateNonce(); // ✅ Proper 24-byte nonce
 
   const encrypted = sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(
     encodeText(message), // Message to encrypt
-    nonce, // Nonce as AAD (Additional Authenticated Data)
+    null, // No additional authenticated data (AAD)
     null, // No secret nonce
-    nonce, // Use the nonce
+    nonce, // ✅ Proper nonce
     key
   );
 
@@ -115,6 +119,7 @@ export const encryptMessage = async (message: string, key: Uint8Array, lastNonce
   return `${arrayBufferToBase64(nonce)}:${arrayBufferToBase64(encrypted)}:${arrayBufferToBase64(hmac)}`;
 };
 
+
 export const decryptMessage = async (ciphertext: string, key: Uint8Array, seenNonces: Set<string>): Promise<string> => {
   await sodium.ready;
 
@@ -122,11 +127,13 @@ export const decryptMessage = async (ciphertext: string, key: Uint8Array, seenNo
   if (!nonceB64 || !encryptedB64 || !hmacB64) throw new Error("Invalid ciphertext format");
 
   const nonce = base64ToArrayBuffer(nonceB64);
+  if (nonce.length !== 24) throw new Error("Invalid nonce length!"); // ✅ Extra validation
+
   const encrypted = base64ToArrayBuffer(encryptedB64);
   const receivedHmac = base64ToArrayBuffer(hmacB64);
 
   // Prevent replay attacks
-  const nonceStr = new TextDecoder().decode(nonce);
+  const nonceStr = arrayBufferToBase64(nonce); // Encode as base64
   if (seenNonces.has(nonceStr)) throw new Error("Replay attack detected!");
   seenNonces.add(nonceStr);
 
@@ -137,7 +144,7 @@ export const decryptMessage = async (ciphertext: string, key: Uint8Array, seenNo
   }
 
   const decrypted = sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(
-    nonce,
+    null, // No additional authenticated data
     encrypted,
     null,
     nonce,
