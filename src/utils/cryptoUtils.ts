@@ -106,14 +106,14 @@ const generateNonce = (): Uint8Array => {
     nonce.set(counterBytes.slice(0, Math.min(24, counterBytes.length)), 0);
 
     nonceCounter++;  // Increment counter
-  } while (seenNonces.has(Buffer.from(nonce).toString('hex')));
+  } while (seenNonces.has(sodium.to_hex(nonce)));  // 🔹 Use sodium.to_hex()
 
   // Store nonce in seenNonces to prevent reuse
-  seenNonces.add(Buffer.from(nonce).toString('hex'));
+  seenNonces.add(sodium.to_hex(nonce));  // 🔹 Use sodium.to_hex()
 
   // Trim set size to prevent memory leak
   if (seenNonces.size > 1000) {
-    seenNonces.clear(); // Optionally, keep last 1000 nonces instead
+    seenNonces.clear();
   }
 
   return nonce;
