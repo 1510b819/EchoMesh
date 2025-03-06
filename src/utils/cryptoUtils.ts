@@ -92,10 +92,30 @@ export const combineKeysForEncryption = async (
   console.log("🔑 Combined encryption key:", finalKey);
   return finalKey;
 };
+const seenNonces = new Set<string>();
+let nonceCounter = 0;  // Ensure nonces are unique across sessions
 
 const generateNonce = (): Uint8Array => {
-  const nonce = new Uint8Array(24);
-  crypto.getRandomValues(nonce); // ✅ Generates a proper 24-byte nonce
+  let nonce;
+  do {
+    nonce = new Uint8Array(24);
+    crypto.getRandomValues(nonce);
+    
+    // Include a counter to ensure uniqueness across sessions
+    const counterBytes = new TextEncoder().encode(nonceCounter.toString());
+    nonce.set(counterBytes.slice(0, Math.min(24, counterBytes.length)), 0);
+
+    nonceCounter++;  // Increment counter
+  } while (seenNonces.has(Buffer.from(nonce).toString('hex')));
+
+  // Store nonce in seenNonces to prevent reuse
+  seenNonces.add(Buffer.from(nonce).toString('hex'));
+
+  // Trim set size to prevent memory leak
+  if (seenNonces.size > 1000) {
+    seenNonces.clear(); // Optionally, keep last 1000 nonces instead
+  }
+
   return nonce;
 };
 
